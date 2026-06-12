@@ -17,8 +17,8 @@ YouTube to Slide is a local macOS app for extracting mostly static lecture slide
 - Paste a YouTube URL and see a title/thumbnail preview before adding the job
 - Install missing `yt-dlp` or `ffmpeg` from inside the app when Homebrew is available
 - Detect slide changes with frame sampling and pixel-change ratio
-- Default 1 second sampling interval and 25% slide-change threshold
-- Export PNG slide folders, PDF files, PPTX decks, and timeline JSON
+- Default 2.5 second sampling interval and 1% slide-change threshold
+- Export PNG slide folders by default, with optional PDF, PPTX, and timeline JSON
 - Keep output next to the source video by default
 - Choose per-job and global output folders
 - Tune sampling interval, pixel delta, threshold, comparison width, and output resolution
@@ -54,7 +54,7 @@ PATH
 
 ## How It Works
 
-The app samples frames from the video, compares each frame against the previous sampled frame, and saves a new slide when enough pixels changed.
+The app samples frames from the video, compares each sampled frame against the last accepted slide baseline, and saves a new slide when enough pixels changed. If several sampled frames do not change, the baseline remains the same until a later frame crosses the threshold.
 
 ```text
 video or YouTube URL
@@ -70,18 +70,19 @@ The default slide-change metric is:
 
 ```text
 changed_pixel_ratio =
-count(abs(gray_t - gray_t+1) > pixel_delta) / total_pixels
+count(abs(gray_baseline - gray_candidate) > pixel_delta) / total_pixels
 ```
 
 Default values:
 
 | Setting | Default |
 | --- | ---: |
-| Sampling interval | 1.0 second |
-| Change threshold | 25% |
+| Sampling interval | 2.5 seconds |
+| Change threshold | 1% |
 | Pixel delta | 25 |
-| Compare width | 320 px |
+| Compare width | 160 px |
 | Resolution | Original |
+| Output format | PNG selected by default |
 
 ## Usage
 
@@ -140,9 +141,9 @@ Recommended starting points:
 
 | Lecture Type | Sampling | Threshold |
 | --- | ---: | ---: |
-| Static slide lecture | 1.0s | 25% |
-| Bullet-heavy lecture | 0.5s | 10-15% |
-| Long lecture with few changes | 2.0s | 25-35% |
+| Static slide lecture | 2.5s | 1-5% |
+| Bullet-heavy lecture | 1.0s | 1-3% |
+| Long lecture with few changes | 5.0s | 5-10% |
 
 ## Privacy
 
@@ -156,7 +157,7 @@ The YouTube preview card uses YouTube's public preview metadata and thumbnail UR
 - The app extracts slide screenshots, not editable slide text.
 - PPTX output places each extracted slide image on a slide; it does not reconstruct native PowerPoint shapes.
 - Videos with live handwriting, frequent cursor movement, animated slides, or speaker overlays may need a lower threshold or manual cleanup.
-- GPU/Metal comparison is not implemented in v1.0.1; the engine is structured so acceleration can be added later.
+- GPU/Metal comparison is not implemented in v1.0.2; the engine is structured so acceleration can be added later.
 
 ## Build From Source
 

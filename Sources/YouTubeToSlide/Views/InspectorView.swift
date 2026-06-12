@@ -25,7 +25,7 @@ struct InspectorView: View {
 
                 VStack(alignment: .leading, spacing: 6) {
                     SettingValueRow(label: "Change threshold", value: AppFormatters.percent(store.settings.changeThreshold))
-                    Slider(value: $store.settings.changeThreshold, in: 0.01...0.80, step: 0.01)
+                    Slider(value: $store.settings.changeThreshold, in: 0.01...0.80, step: 0.005)
                 }
 
                 Stepper(value: $store.settings.pixelDelta, in: 1...100, step: 1) {

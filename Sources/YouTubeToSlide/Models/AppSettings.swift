@@ -1,15 +1,15 @@
 import Foundation
 
 struct AppSettings: Equatable {
-    var sampleInterval: Double = 1.0
-    var changeThreshold: Double = 0.25
+    var sampleInterval: Double = 2.5
+    var changeThreshold: Double = 0.01
     var pixelDelta: Int = 25
-    var compareWidth: Int = 320
+    var compareWidth: Int = 160
     var resolution: ResolutionPreset = .original
     var customWidth: Int = 1920
     var exportPNG: Bool = true
-    var exportPDF: Bool = true
-    var exportPPTX: Bool = true
+    var exportPDF: Bool = false
+    var exportPPTX: Bool = false
     var defaultOutputDirectory: URL?
 
     var selectedFormats: Set<OutputFormat> {

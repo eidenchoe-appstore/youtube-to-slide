@@ -29,8 +29,10 @@ struct ContentView: View {
                 Button {
                     store.startProcessing()
                 } label: {
-                    Label("Start", systemImage: "play.fill")
+                    Label("Start Processing", systemImage: "play.fill")
                 }
+                .buttonStyle(.borderedProminent)
+                .tint(.blue)
                 .disabled(store.isProcessing)
 
                 Button {

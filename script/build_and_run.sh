@@ -5,8 +5,8 @@ MODE="${1:-run}"
 APP_DISPLAY_NAME="YouTube to Slide"
 EXECUTABLE_NAME="YouTubeToSlide"
 BUNDLE_ID="com.eidenchoe.youtube-to-slide"
-VERSION="1.0.1"
-BUILD="2"
+VERSION="1.0.2"
+BUILD="3"
 MIN_SYSTEM_VERSION="13.0"
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -53,7 +53,7 @@ prepare_icon() {
   fi
 
   if [[ "$FILE_TYPE" == *"PNG image"* ]] || [[ "$FILE_TYPE" == *"JPEG image"* ]]; then
-    ICONSET="$DIST_DIR/AppIcon.iconset"
+    ICONSET="$DIST_DIR/AppIcon-$$.iconset"
     rm -rf "$ICONSET"
     mkdir -p "$ICONSET"
 
@@ -68,6 +68,7 @@ prepare_icon() {
     /usr/bin/sips -z 512 512 "$ICON_SOURCE" --out "$ICONSET/icon_512x512.png" >/dev/null
     /usr/bin/sips -z 1024 1024 "$ICON_SOURCE" --out "$ICONSET/icon_512x512@2x.png" >/dev/null
     /usr/bin/iconutil -c icns "$ICONSET" -o "$APP_RESOURCES/AppIcon.icns"
+    rm -rf "$ICONSET"
     return 0
   fi
 

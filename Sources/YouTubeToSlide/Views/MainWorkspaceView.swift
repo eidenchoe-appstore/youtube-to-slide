@@ -55,6 +55,26 @@ private struct InputHeaderView: View {
                 .buttonStyle(.link)
 
                 Spacer()
+
+                if store.isProcessing {
+                    Button {
+                        store.cancelProcessing()
+                    } label: {
+                        Label("Cancel", systemImage: "stop.fill")
+                    }
+                    .controlSize(.large)
+                }
+
+                Button {
+                    store.startProcessing()
+                } label: {
+                    Label("Start Processing", systemImage: "play.fill")
+                        .font(.headline)
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.large)
+                .tint(.blue)
+                .disabled(store.isProcessing || store.jobs.isEmpty)
             }
 
             DropZoneView(compact: true)

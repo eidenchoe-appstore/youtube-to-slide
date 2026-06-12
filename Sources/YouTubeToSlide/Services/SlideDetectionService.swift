@@ -21,7 +21,7 @@ struct SlideDetectionService {
         var candidates = [
             SlideCandidate(frameURL: first.url, timestampSec: first.timestampSec, changeRatio: 0)
         ]
-        var previous = first
+        var baseline = first
 
         for index in 1..<frames.count {
             if Task.isCancelled {
@@ -30,7 +30,7 @@ struct SlideDetectionService {
 
             let current = frames[index]
             let ratio = try comparator.changedPixelRatio(
-                previous: previous.url,
+                previous: baseline.url,
                 current: current.url,
                 pixelDelta: settings.pixelDelta,
                 compareWidth: settings.compareWidth
@@ -44,9 +44,9 @@ struct SlideDetectionService {
                         changeRatio: ratio
                     )
                 )
+                baseline = current
             }
 
-            previous = current
             progress(Double(index + 1) / Double(frames.count))
         }
 
