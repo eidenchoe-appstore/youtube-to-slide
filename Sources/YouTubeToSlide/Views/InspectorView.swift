@@ -173,7 +173,7 @@ struct InspectorView: View {
             VStack(alignment: .leading, spacing: 12) {
                 Picker("First model", selection: primaryModelBinding) {
                     ForEach(OpenRouterStudyModel.allCases) { model in
-                        Text("\(model.displayName) - \(model.badge)")
+                        Text(model.displayName)
                             .tag(model.id)
                     }
                 }
@@ -184,7 +184,7 @@ struct InspectorView: View {
 
                 Picker("Second model", selection: fallbackModelBinding) {
                     ForEach(OpenRouterStudyModel.allCases) { model in
-                        Text("\(model.displayName) - \(model.badge)")
+                        Text(model.displayName)
                             .tag(model.id)
                     }
                 }
@@ -235,6 +235,9 @@ struct InspectorView: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .textSelection(.enabled)
+            Text(model.badge)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
             Text(model.advantage)
                 .font(.caption)
                 .foregroundStyle(.secondary)

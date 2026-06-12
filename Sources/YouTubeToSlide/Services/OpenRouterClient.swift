@@ -32,10 +32,11 @@ struct OpenRouterClient {
     init(apiKey: String, modelIDs: [String]) {
         self.apiKey = apiKey
         var uniqueModelIDs: [String] = []
-        for modelID in modelIDs where !uniqueModelIDs.contains(modelID) {
+        for modelID in modelIDs
+        where OpenRouterStudyModel.isAvailable(modelID) && !uniqueModelIDs.contains(modelID) {
             uniqueModelIDs.append(modelID)
         }
-        self.modelIDs = uniqueModelIDs.isEmpty ? [OpenRouterStudyModel.nemotronNano.id] : uniqueModelIDs
+        self.modelIDs = uniqueModelIDs.isEmpty ? [OpenRouterStudyModel.gemma31B.id] : uniqueModelIDs
     }
 
     func generateStudyNote(slide: SlideFrame, lectureTitle: String) async throws -> SlideStudyNote {

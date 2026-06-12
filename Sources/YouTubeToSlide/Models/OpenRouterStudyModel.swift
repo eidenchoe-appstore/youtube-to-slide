@@ -1,46 +1,50 @@
 import Foundation
 
 enum OpenRouterStudyModel: String, CaseIterable, Identifiable {
-    case nemotronNano = "nvidia/nemotron-nano-12b-v2-vl:free"
     case gemma31B = "google/gemma-4-31b-it:free"
-    case nemotronRerankVL = "nvidia/llama-nemotron-rerank-vl-1b-v2:free"
+    case gemma26BA4B = "google/gemma-4-26b-a4b-it:free"
+    case nemotron3NanoOmni = "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free"
 
     var id: String { rawValue }
 
     var displayName: String {
         switch self {
-        case .nemotronNano:
-            return "Nemotron Nano 12B VL"
         case .gemma31B:
-            return "Gemma 4 31B"
-        case .nemotronRerankVL:
-            return "Nemotron Rerank VL 1B"
+            return "Gemma 4 31B (free)"
+        case .gemma26BA4B:
+            return "Gemma 4 26B A4B (free)"
+        case .nemotron3NanoOmni:
+            return "Nemotron 3 Nano Omni (free)"
         }
     }
 
     var badge: String {
         switch self {
-        case .nemotronNano:
-            return "Default"
         case .gemma31B:
             return "Best overall"
-        case .nemotronRerankVL:
-            return "Fast"
+        case .gemma26BA4B:
+            return "Balanced backup"
+        case .nemotron3NanoOmni:
+            return "Fast reasoning"
         }
     }
 
     var advantage: String {
         switch self {
-        case .nemotronNano:
-            return "OCR, document understanding, charts, and slide-level multimodal comprehension."
         case .gemma31B:
-            return "Strong image understanding, multilingual explanation, long-context synthesis, and instruction following."
-        case .nemotronRerankVL:
-            return "Useful when speed and lightweight visual relevance checks matter more than detailed explanation."
+            return "Best default for slide understanding, multilingual summaries, and instruction-following."
+        case .gemma26BA4B:
+            return "Balanced backup for Korean/English slide explanation with lower load than 31B."
+        case .nemotron3NanoOmni:
+            return "Fast reasoning-oriented backup for quick slide study notes when throughput matters."
         }
     }
 
+    static func isAvailable(_ id: String) -> Bool {
+        OpenRouterStudyModel(rawValue: id) != nil
+    }
+
     static func model(for id: String) -> OpenRouterStudyModel {
-        OpenRouterStudyModel(rawValue: id) ?? .nemotronNano
+        OpenRouterStudyModel(rawValue: id) ?? .gemma31B
     }
 }

@@ -30,10 +30,12 @@ final class JobStore: ObservableObject {
         if let storedPath = UserDefaults.standard.string(forKey: "defaultOutputDirectory") {
             initialSettings.defaultOutputDirectory = URL(fileURLWithPath: storedPath)
         }
-        if let storedPrimaryModelID = UserDefaults.standard.string(forKey: "primaryStudyModelID") {
+        if let storedPrimaryModelID = UserDefaults.standard.string(forKey: "primaryStudyModelID"),
+           OpenRouterStudyModel.isAvailable(storedPrimaryModelID) {
             initialSettings.primaryStudyModelID = storedPrimaryModelID
         }
-        if let storedFallbackModelID = UserDefaults.standard.string(forKey: "fallbackStudyModelID") {
+        if let storedFallbackModelID = UserDefaults.standard.string(forKey: "fallbackStudyModelID"),
+           OpenRouterStudyModel.isAvailable(storedFallbackModelID) {
             initialSettings.fallbackStudyModelID = storedFallbackModelID
         }
         if let storedNotionParentPageURL = UserDefaults.standard.string(forKey: "notionParentPageURL") {

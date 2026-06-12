@@ -86,8 +86,8 @@ Each generated study note is prompted to start with an inferred slide title and 
 Default model order:
 
 ```text
-First model: nvidia/nemotron-nano-12b-v2-vl:free
-Second model: google/gemma-4-31b-it:free
+First model: google/gemma-4-31b-it:free
+Second model: google/gemma-4-26b-a4b-it:free
 ```
 
 If the first model is rate-limited or temporarily unavailable, the app retries the same request with the second model. If both selectors use the same model, duplicate fallback is skipped.
@@ -96,11 +96,13 @@ Model choices:
 
 | Model | Best For |
 | --- | --- |
-| `nvidia/nemotron-nano-12b-v2-vl:free` | Default. OCR, document understanding, charts, and slide-level multimodal comprehension |
-| `google/gemma-4-31b-it:free` | Strong image understanding, multilingual explanation, long-context synthesis, and instruction following |
-| `nvidia/llama-nemotron-rerank-vl-1b-v2:free` | Fast lightweight visual relevance checks when speed matters |
+| `google/gemma-4-31b-it:free` | Best default for slide understanding, multilingual summaries, and instruction-following |
+| `google/gemma-4-26b-a4b-it:free` | Balanced backup for Korean/English slide explanation with lower load than 31B |
+| `nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free` | Fast reasoning-oriented backup for quick slide study notes when throughput matters |
 
 The app sends selected PNG slide images to OpenRouter only when you explicitly run a study or chat action.
+
+If OpenRouter returns `free-models-per-day`, add OpenRouter credits from your OpenRouter account billing or credits page. OpenRouter documents a 50 requests/day limit for free models when you have purchased less than 10 credits, and 1000 requests/day after purchasing at least 10 credits.
 
 For token efficiency, **Study All Slides** and **Note to Notion Page** reuse existing slide notes and only send slides whose notes are still missing. Whole-deck chat uses generated notes as the primary context when they are available.
 
@@ -229,7 +231,7 @@ OpenRouter study-note and chat features send selected slide PNGs and your prompt
 - The app extracts slide screenshots, not editable slide text.
 - PPTX output places each extracted slide image on a slide while preserving the extracted video frame aspect ratio; it does not reconstruct native PowerPoint shapes.
 - Videos with live handwriting, frequent cursor movement, animated slides, or speaker overlays may need a lower threshold or manual cleanup.
-- GPU/Metal comparison is not implemented in v2.2.0; the engine is structured so acceleration can be added later.
+- GPU/Metal comparison is not implemented in v2.2.1; the engine is structured so acceleration can be added later.
 
 ## Build From Source
 

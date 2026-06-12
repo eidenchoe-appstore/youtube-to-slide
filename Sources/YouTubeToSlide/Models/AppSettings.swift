@@ -10,17 +10,18 @@ struct AppSettings: Equatable {
     var exportPNG: Bool = true
     var exportPDF: Bool = false
     var exportPPTX: Bool = false
-    var primaryStudyModelID: String = OpenRouterStudyModel.nemotronNano.id
-    var fallbackStudyModelID: String = OpenRouterStudyModel.gemma31B.id
+    var primaryStudyModelID: String = OpenRouterStudyModel.gemma31B.id
+    var fallbackStudyModelID: String = OpenRouterStudyModel.gemma26BA4B.id
     var notionParentPageURL: String = ""
     var defaultOutputDirectory: URL?
 
     var studyModelIDs: [String] {
         var modelIDs: [String] = []
-        for modelID in [primaryStudyModelID, fallbackStudyModelID] where !modelIDs.contains(modelID) {
+        for modelID in [primaryStudyModelID, fallbackStudyModelID]
+        where OpenRouterStudyModel.isAvailable(modelID) && !modelIDs.contains(modelID) {
             modelIDs.append(modelID)
         }
-        return modelIDs
+        return modelIDs.isEmpty ? [OpenRouterStudyModel.gemma31B.id] : modelIDs
     }
 
     var selectedFormats: Set<OutputFormat> {
