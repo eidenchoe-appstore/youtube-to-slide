@@ -4,14 +4,35 @@ import Security
 enum KeychainService {
     private static let service = "com.eidenchoe.youtube-to-slide"
     private static let openRouterAccount = "openrouter-api-key"
+    private static let notionAccount = "notion-api-key"
 
     static func saveOpenRouterAPIKey(_ apiKey: String) throws {
-        let data = Data(apiKey.utf8)
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: openRouterAccount
-        ]
+        try save(apiKey, account: openRouterAccount)
+    }
+
+    static func loadOpenRouterAPIKey() -> String? {
+        load(account: openRouterAccount)
+    }
+
+    static func deleteOpenRouterAPIKey() throws {
+        try delete(account: openRouterAccount)
+    }
+
+    static func saveNotionAPIKey(_ apiKey: String) throws {
+        try save(apiKey, account: notionAccount)
+    }
+
+    static func loadNotionAPIKey() -> String? {
+        load(account: notionAccount)
+    }
+
+    static func deleteNotionAPIKey() throws {
+        try delete(account: notionAccount)
+    }
+
+    private static func save(_ value: String, account: String) throws {
+        let data = Data(value.utf8)
+        let query = baseQuery(account: account)
 
         SecItemDelete(query as CFDictionary)
 
@@ -24,11 +45,11 @@ enum KeychainService {
         }
     }
 
-    static func loadOpenRouterAPIKey() -> String? {
+    private static func load(account: String) -> String? {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
-            kSecAttrAccount as String: openRouterAccount,
+            kSecAttrAccount as String: account,
             kSecReturnData as String: true,
             kSecMatchLimit as String: kSecMatchLimitOne
         ]
@@ -43,17 +64,20 @@ enum KeychainService {
         return String(data: data, encoding: .utf8)
     }
 
-    static func deleteOpenRouterAPIKey() throws {
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: openRouterAccount
-        ]
-
+    private static func delete(account: String) throws {
+        let query = baseQuery(account: account)
         let status = SecItemDelete(query as CFDictionary)
         guard status == errSecSuccess || status == errSecItemNotFound else {
             throw KeychainError.unhandledStatus(status)
         }
+    }
+
+    private static func baseQuery(account: String) -> [String: Any] {
+        [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: account
+        ]
     }
 }
 

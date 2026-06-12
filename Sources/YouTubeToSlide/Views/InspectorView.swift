@@ -20,7 +20,8 @@ struct InspectorView: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 22) {
-                    apiSettingsSection
+                    openRouterAPISection
+                    notionAPISection
                     modelFallbackSection
                 }
                 .padding(18)
@@ -99,7 +100,7 @@ struct InspectorView: View {
         }
     }
 
-    private var apiSettingsSection: some View {
+    private var openRouterAPISection: some View {
         InspectorSection("OpenRouter API") {
             VStack(alignment: .leading, spacing: 12) {
                 HStack {
@@ -124,6 +125,45 @@ struct InspectorView: View {
                     }
                     .disabled(!store.hasOpenRouterAPIKey)
                 }
+            }
+        }
+    }
+
+    private var notionAPISection: some View {
+        InspectorSection("Notion API") {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Image(systemName: store.hasNotionAPIKey ? "checkmark.circle.fill" : "key.fill")
+                        .foregroundStyle(store.hasNotionAPIKey ? .green : .secondary)
+                    Text(store.hasNotionAPIKey ? "Notion API token saved" : "Notion API token required")
+                        .font(.callout)
+                }
+
+                SecureField("Notion API token", text: $store.notionAPIKeyInput)
+                    .textFieldStyle(.roundedBorder)
+
+                HStack {
+                    Button("Save Token") {
+                        store.saveNotionAPIKey()
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(store.notionAPIKeyInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+
+                    Button("Clear") {
+                        store.clearNotionAPIKey()
+                    }
+                    .disabled(!store.hasNotionAPIKey)
+                }
+
+                Divider()
+
+                TextField("Parent page URL or page ID", text: notionParentPageURLBinding, axis: .vertical)
+                    .textFieldStyle(.roundedBorder)
+                    .lineLimit(2...3)
+
+                Text("Share the parent page with your Notion integration before sending. The app creates a new child page under this parent.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
         }
     }
@@ -177,6 +217,14 @@ struct InspectorView: View {
             store.settings.fallbackStudyModelID
         } set: { modelID in
             store.setFallbackStudyModelID(modelID)
+        }
+    }
+
+    private var notionParentPageURLBinding: Binding<String> {
+        Binding {
+            store.settings.notionParentPageURL
+        } set: { parentPageURL in
+            store.setNotionParentPageURL(parentPageURL)
         }
     }
 

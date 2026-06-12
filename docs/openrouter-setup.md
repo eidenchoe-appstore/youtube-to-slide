@@ -54,7 +54,7 @@ Free models can have provider-side rate limits or temporary availability issues.
 
 1. Select a processed job.
 2. Select a slide in **PNG Slides**.
-3. Click **Study Selected** for one slide, **Study All Slides** for manual full-deck note generation, or **Note to Notion Page** for the complete full-deck Notion export workflow.
+3. Click **Study Selected** for one slide, **Study All Slides** for manual full-deck note generation, or **Note to Notion Page** when you want the app to generate missing notes before sending the full page to Notion.
 
 For token efficiency, **Study All Slides** and **Note to Notion Page** reuse notes that already exist and only send slides whose notes are still missing. Whole-deck chat uses generated notes as the primary context when they are available.
 
@@ -79,39 +79,23 @@ The VLM is prompted to infer a slide title and create a study-note structure:
 - Review questions
 ```
 
-## 5. Export a Notion Page ZIP
+## 5. Send Notes to Notion
 
-Click **Note to Notion Page** after slide extraction. The app checks the full deck, generates missing notes for every slide, then creates the Notion-ready ZIP.
+Click **Note to Notion Page** after slide extraction. The app checks the full deck, generates missing study notes, then uses your Notion API settings to create a child page under the configured parent page.
 
-The app creates:
+The resulting Notion page uses this structure:
 
 ```text
-LectureTitle.notion-page.zip
-  LectureTitle.md
-  assets/
-    slide_000001_3s.png
-    slide_000002_37s.png
+Parent page
+  Lecture title
+    Slide 1: inferred title
+    [uploaded slide image]
+    핵심 요약
+    슬라이드 내용 해설
+    ...
 ```
 
-The Markdown uses a Notion-safe heading hierarchy:
-
-```markdown
-# Lecture title
-
-## Slide 1: Slide title inferred by the VLM
-
-![Slide 1](assets/slide_000001_3s.png)
-
-### 핵심 요약
-- Main points
-
-### 슬라이드 내용 해설
-- Student-friendly explanation
-```
-
-Import the ZIP into Notion so the Markdown and referenced local slide images are handled together. The export intentionally avoids HTML tags, internal anchors, footnotes, Mermaid blocks, and complex tables because those are less reliable for Notion import.
-
-Reference: [Notion enhanced Markdown format](https://developers.notion.com/guides/data-apis/enhanced-markdown).
+For Notion token and parent page setup, see [Notion Setup](notion-setup.md).
 
 ## Privacy Notes
 

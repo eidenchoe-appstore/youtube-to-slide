@@ -12,6 +12,7 @@ struct AppSettings: Equatable {
     var exportPPTX: Bool = false
     var primaryStudyModelID: String = OpenRouterStudyModel.nemotronNano.id
     var fallbackStudyModelID: String = OpenRouterStudyModel.gemma31B.id
+    var notionParentPageURL: String = ""
     var defaultOutputDirectory: URL?
 
     var studyModelIDs: [String] {

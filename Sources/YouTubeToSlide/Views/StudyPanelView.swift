@@ -55,14 +55,14 @@ struct StudyPanelView: View {
                 .tint(.blue)
                 .disabled(job.slides.isEmpty)
                 .disabled(store.isGeneratingStudyNotes)
-                .disabled(!store.hasOpenRouterAPIKey && !allSlidesHaveNotes)
-                .help("Generate missing study notes, then export one Notion-ready Markdown + assets ZIP.")
+                .disabled(!canSendToNotion)
+                .help("Generate missing study notes, upload slide images, and create a child page in Notion.")
 
                 Spacer()
             }
 
-            if !store.hasOpenRouterAPIKey && !allSlidesHaveNotes {
-                Label("Save an OpenRouter API key in the inspector to generate full-deck study notes and Notion pages.", systemImage: "lock.fill")
+            if !canSendToNotion {
+                Label(notionRequirementMessage, systemImage: "lock.fill")
                     .font(.callout)
                     .foregroundStyle(.secondary)
                     .padding(10)
@@ -72,9 +72,28 @@ struct StudyPanelView: View {
 
             if store.isGeneratingStudyNotes {
                 ProgressView(value: store.studyProgress)
-                Text(store.isCreatingNotionPage ? "Generating notes for the full Notion page..." : "Generating study notes...")
+                Text(store.isCreatingNotionPage ? "Generating missing notes before sending to Notion..." : "Generating study notes...")
                     .font(.caption)
                     .foregroundStyle(.secondary)
+            } else if store.isCreatingNotionPage {
+                ProgressView()
+                Text("Uploading slide images and creating the Notion page...")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            if job.notionPageURL != nil {
+                HStack {
+                    Label("Notion page created", systemImage: "checkmark.circle.fill")
+                        .foregroundStyle(.green)
+                    Spacer()
+                    Button {
+                        store.openNotionPage(for: job)
+                    } label: {
+                        Label("Open in Notion", systemImage: "arrow.up.right.square")
+                    }
+                }
+                .font(.callout)
             }
 
             notePreview
@@ -94,6 +113,28 @@ struct StudyPanelView: View {
             let note = job.studyNotes[slide.index]?.markdown.trimmingCharacters(in: .whitespacesAndNewlines)
             return !(note?.isEmpty ?? true)
         }
+    }
+
+    private var canSendToNotion: Bool {
+        let hasParentPage = !store.settings.notionParentPageURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        let hasStudyContext = store.hasOpenRouterAPIKey || allSlidesHaveNotes
+        return store.hasNotionAPIKey && hasParentPage && hasStudyContext
+    }
+
+    private var notionRequirementMessage: String {
+        if !store.hasNotionAPIKey {
+            return "Save a Notion API token in API Settings before sending pages to Notion."
+        }
+
+        if store.settings.notionParentPageURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return "Enter a Notion parent page URL in API Settings before sending pages to Notion."
+        }
+
+        if !store.hasOpenRouterAPIKey && !allSlidesHaveNotes {
+            return "Save an OpenRouter API key or generate all slide notes before sending the full study page."
+        }
+
+        return "Complete Notion and OpenRouter settings before sending the page."
     }
 
     private var header: some View {
@@ -136,7 +177,7 @@ struct StudyPanelView: View {
                 .padding(10)
                 .background(.background, in: RoundedRectangle(cornerRadius: 8))
             } else {
-                Text("Select a slide and click Study Selected, or click Note to Notion Page to generate missing notes and export a Notion-ready Markdown ZIP.")
+                Text("Select a slide and click Study Selected, or click Note to Notion Page to generate missing notes and create a Notion child page.")
                     .font(.callout)
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, alignment: .leading)

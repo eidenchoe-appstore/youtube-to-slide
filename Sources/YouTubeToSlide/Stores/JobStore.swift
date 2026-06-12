@@ -13,7 +13,9 @@ final class JobStore: ObservableObject {
     @Published var studyProgress = 0.0
     @Published var installingFormula: String?
     @Published var hasOpenRouterAPIKey: Bool
+    @Published var hasNotionAPIKey: Bool
     @Published var openRouterAPIKeyInput = ""
+    @Published var notionAPIKeyInput = ""
     @Published var selectedSlideIndex: Int?
     @Published var message: String?
 
@@ -34,9 +36,13 @@ final class JobStore: ObservableObject {
         if let storedFallbackModelID = UserDefaults.standard.string(forKey: "fallbackStudyModelID") {
             initialSettings.fallbackStudyModelID = storedFallbackModelID
         }
+        if let storedNotionParentPageURL = UserDefaults.standard.string(forKey: "notionParentPageURL") {
+            initialSettings.notionParentPageURL = storedNotionParentPageURL
+        }
         self.settings = initialSettings
         self.toolStatus = ToolResolver.resolve()
         self.hasOpenRouterAPIKey = KeychainService.loadOpenRouterAPIKey() != nil
+        self.hasNotionAPIKey = KeychainService.loadNotionAPIKey() != nil
     }
 
     var selectedJob: ExtractionJob? {
@@ -150,6 +156,34 @@ final class JobStore: ObservableObject {
         }
     }
 
+    func saveNotionAPIKey() {
+        let trimmed = notionAPIKeyInput.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            message = "Enter a Notion API token first."
+            return
+        }
+
+        do {
+            try KeychainService.saveNotionAPIKey(trimmed)
+            hasNotionAPIKey = true
+            notionAPIKeyInput = ""
+            message = "Notion API token saved to Keychain."
+        } catch {
+            message = error.localizedDescription
+        }
+    }
+
+    func clearNotionAPIKey() {
+        do {
+            try KeychainService.deleteNotionAPIKey()
+            hasNotionAPIKey = false
+            notionAPIKeyInput = ""
+            message = "Notion API token removed."
+        } catch {
+            message = error.localizedDescription
+        }
+    }
+
     func removeSelectedJob() {
         guard let selectedJobID else {
             return
@@ -183,11 +217,24 @@ final class JobStore: ObservableObject {
         UserDefaults.standard.set(modelID, forKey: "fallbackStudyModelID")
     }
 
+    func setNotionParentPageURL(_ parentPageURL: String) {
+        settings.notionParentPageURL = parentPageURL
+        UserDefaults.standard.set(parentPageURL, forKey: "notionParentPageURL")
+    }
+
     func revealOutput(for job: ExtractionJob?) {
         guard let job else {
             return
         }
         NSWorkspace.shared.activateFileViewerSelecting([job.outputDirectory])
+    }
+
+    func openNotionPage(for job: ExtractionJob?) {
+        guard let url = job?.notionPageURL else {
+            message = "Create a Notion page first."
+            return
+        }
+        NSWorkspace.shared.open(url)
     }
 
     func selectSlide(_ slideIndex: Int) {
@@ -313,7 +360,7 @@ final class JobStore: ObservableObject {
 
         let missingSlides = slidesMissingStudyNotes(in: job)
         guard !missingSlides.isEmpty else {
-            message = "All slide study notes already exist. Use Note to Notion Page to export them."
+            message = "All slide study notes already exist. Use Note to Notion Page to send them to Notion."
             return
         }
 
@@ -378,6 +425,10 @@ final class JobStore: ObservableObject {
             return
         }
 
+        guard notionExportConfiguration() != nil else {
+            return
+        }
+
         let missingSlides = slidesMissingStudyNotes(in: job)
 
         guard missingSlides.isEmpty else {
@@ -385,22 +436,29 @@ final class JobStore: ObservableObject {
             return
         }
 
-        exportNotionPage(job: job)
+        sendNotionPage(job: job)
     }
 
     func exportNoteToNotionPageForSelectedJob() {
         createNoteToNotionPageForSelectedJob()
     }
 
-    private func exportNotionPage(job: ExtractionJob) {
-        do {
-            let outputURL = try NotionZipExporter().export(job: job)
-            updateJob(job.id) { job in
-                job.notionZipURL = outputURL
-            }
-            message = "Full Note to Notion Page ZIP created: \(outputURL.lastPathComponent)"
-        } catch {
-            message = error.localizedDescription
+    private func sendNotionPage(job: ExtractionJob) {
+        guard let configuration = notionExportConfiguration() else {
+            return
+        }
+
+        isCreatingNotionPage = true
+
+        Task { [weak self] in
+            guard let self else { return }
+            _ = await self.performNotionPageSend(
+                jobID: job.id,
+                job: job,
+                apiKey: configuration.apiKey,
+                parentPageURL: configuration.parentPageURL
+            )
+            self.isCreatingNotionPage = false
         }
     }
 
@@ -463,7 +521,7 @@ final class JobStore: ObservableObject {
         guard !slides.isEmpty else {
             if exportNotionPageAfterCompletion,
                let job = jobs.first(where: { $0.id == jobID }) {
-                exportNotionPage(job: job)
+                sendNotionPage(job: job)
             }
             return
         }
@@ -510,7 +568,14 @@ final class JobStore: ObservableObject {
             if exportNotionPageAfterCompletion,
                completed,
                let refreshedJob = self.jobs.first(where: { $0.id == jobID }) {
-                self.exportNotionPage(job: refreshedJob)
+                if let configuration = self.notionExportConfiguration() {
+                    _ = await self.performNotionPageSend(
+                        jobID: jobID,
+                        job: refreshedJob,
+                        apiKey: configuration.apiKey,
+                        parentPageURL: configuration.parentPageURL
+                    )
+                }
             }
 
             self.isGeneratingStudyNotes = false
@@ -527,6 +592,51 @@ final class JobStore: ObservableObject {
         }
         hasOpenRouterAPIKey = true
         return apiKey
+    }
+
+    private func notionExportConfiguration() -> (apiKey: String, parentPageURL: String)? {
+        let apiKey = KeychainService.loadNotionAPIKey()?.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let apiKey, !apiKey.isEmpty else {
+            hasNotionAPIKey = false
+            message = "Enter and save a Notion API token first."
+            return nil
+        }
+
+        let parentPageURL = settings.notionParentPageURL.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !parentPageURL.isEmpty else {
+            message = "Enter a Notion parent page URL in API Settings first."
+            return nil
+        }
+
+        guard NotionParentPageIDParser.parse(parentPageURL) != nil else {
+            message = "Enter a valid Notion parent page URL or page ID."
+            return nil
+        }
+
+        hasNotionAPIKey = true
+        return (apiKey, parentPageURL)
+    }
+
+    private func performNotionPageSend(
+        jobID: UUID,
+        job: ExtractionJob,
+        apiKey: String,
+        parentPageURL: String
+    ) async -> Bool {
+        do {
+            let result = try await Task.detached(priority: .userInitiated) {
+                try await NotionPageExporter(apiKey: apiKey).export(job: job, parentPageURL: parentPageURL)
+            }.value
+
+            updateJob(jobID) { job in
+                job.notionPageURL = result.pageURL
+            }
+            message = "Notion page created: \(result.pageURL.absoluteString)"
+            return true
+        } catch {
+            message = error.localizedDescription
+            return false
+        }
     }
 
     private func deduplicatedOutputDirectory(_ proposed: URL) -> URL {

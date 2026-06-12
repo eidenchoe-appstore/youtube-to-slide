@@ -97,7 +97,7 @@ struct ExtractionJob: Identifiable, Equatable {
     var youtubePreview: YouTubePreview?
     var studyNotes: [Int: SlideStudyNote]
     var chatMessages: [StudyChatMessage]
-    var notionZipURL: URL?
+    var notionPageURL: URL?
     var createdAt: Date
 
     init(
@@ -124,7 +124,7 @@ struct ExtractionJob: Identifiable, Equatable {
         self.youtubePreview = youtubePreview
         self.studyNotes = [:]
         self.chatMessages = []
-        self.notionZipURL = nil
+        self.notionPageURL = nil
         self.createdAt = Date()
     }
 }

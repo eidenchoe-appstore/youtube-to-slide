@@ -48,7 +48,7 @@ struct DetailView: View {
 
                 CollapsibleWorkspaceSection(
                     title: "Chat & Study",
-                    subtitle: "Generate full-deck study notes and export a Notion page ZIP.",
+                    subtitle: "Generate full-deck study notes and send them to a Notion page.",
                     systemImage: "doc.richtext",
                     badge: "\(job.studyNotes.count)/\(job.slides.count) noted",
                     isExpanded: $isStudyExpanded

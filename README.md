@@ -21,7 +21,7 @@ YouTube to Slide is a local macOS app for extracting mostly static lecture slide
 - Export PNG slide folders by default, with optional PDF, PPTX, and timeline JSON
 - Generate slide-by-slide study notes with OpenRouter vision models
 - Chat about a selected slide or the whole lecture
-- Create a full-deck **Note to Notion Page** ZIP that generates missing slide notes and packages Markdown plus PNG assets
+- Send a full-deck **Note to Notion Page** directly into Notion with uploaded slide images and study-note blocks
 - Collapse or expand Processing, PNG Slides, and Chat & Study sections in the main workspace
 - Keep output next to the source video by default
 - Choose per-job and global output folders
@@ -56,9 +56,9 @@ The app looks for tools in this order:
 PATH
 ```
 
-AI study notes require your own OpenRouter API key. The key is stored in macOS Keychain and is only used when you click study-note or chat buttons.
+AI study notes require your own OpenRouter API key. Notion page creation requires your own Notion integration token and parent page URL. API tokens are stored in macOS Keychain and are only used when you click the relevant buttons.
 
-For setup steps, see [OpenRouter Setup for YouTube to Slide](docs/openrouter-setup.md). Official references: [OpenRouter Quickstart](https://openrouter.ai/docs/quickstart) and [API Authentication](https://openrouter.ai/docs/api/reference/authentication).
+For setup steps, see [OpenRouter Setup](docs/openrouter-setup.md) and [Notion Setup](docs/notion-setup.md).
 
 ## AI Study Notes
 
@@ -68,9 +68,8 @@ After extracting slides, save an OpenRouter API key in the inspector's **API Set
 2. Click **Save Key**.
 3. Choose **First model** and **Second model** for fallback.
 4. Click **Study Selected**, **Study All Slides**, or ask a question in the chat box when you want manual study actions.
-5. Click **Note to Notion Page** to generate missing notes for every slide and create a ZIP with one Markdown page and slide image assets.
-
-The ZIP is intended for Notion import: it contains `Title.md` and an `assets/` folder with the referenced PNG slides. This is more reliable for Notion import than the earlier HTML export path.
+5. Add a Notion token and parent page URL in **API Settings**.
+6. Click **Note to Notion Page** to generate missing notes, upload slide images to Notion, and create a child page under the selected parent page.
 
 Each generated study note is prompted to start with an inferred slide title and then use section headings:
 
@@ -104,6 +103,22 @@ Model choices:
 The app sends selected PNG slide images to OpenRouter only when you explicitly run a study or chat action.
 
 For token efficiency, **Study All Slides** and **Note to Notion Page** reuse existing slide notes and only send slides whose notes are still missing. Whole-deck chat uses generated notes as the primary context when they are available.
+
+## Send to Notion
+
+**Note to Notion Page** no longer creates a ZIP for manual import. It uses the Notion API directly:
+
+```text
+Notion parent page URL
+→ create child page named after the video title
+→ upload each slide PNG with Notion File Upload API
+→ append image blocks and study-note blocks
+→ show Open in Notion
+```
+
+Local videos use the original video filename without the extension as the Notion page title. YouTube jobs use the resolved YouTube title.
+
+Before sending, create a Notion integration, copy its internal integration token, and share the target parent page with that integration. See [Notion Setup](docs/notion-setup.md).
 
 ## How It Works
 
@@ -173,7 +188,6 @@ VideoTitle/
   VideoTitle.pdf
   VideoTitle.pptx
   VideoTitle.timeline.json
-  VideoTitle.notion-page.zip
 ```
 
 ## Output Formats
@@ -184,7 +198,7 @@ VideoTitle/
 | PDF | Best for reading, printing, and sharing |
 | PPTX | Best for opening the result as a PowerPoint deck; slide size keeps the extracted video frame aspect ratio |
 | Timeline JSON | Best for auditing timestamps and change ratios |
-| Note to Notion Page ZIP | Best for importing a full-deck study page into Notion; generates missing notes for every slide, then packages Notion-safe Markdown plus an `assets/` folder |
+| Note to Notion Page | Best for creating a full-deck study page directly in Notion with uploaded slide images |
 
 ## Tuning
 
@@ -206,7 +220,7 @@ Slide extraction is local. Local videos stay on your Mac. YouTube links are down
 
 The YouTube preview card uses YouTube's public preview metadata and thumbnail URL for the pasted link.
 
-OpenRouter study-note and chat features send selected slide PNGs and your prompt to OpenRouter only after you click the relevant buttons. The API key is stored in Keychain.
+OpenRouter study-note and chat features send selected slide PNGs and your prompt to OpenRouter only after you click the relevant buttons. Notion page creation uploads slide PNGs and study-note text to the parent page you configured. API tokens are stored in Keychain.
 
 ## Limitations
 
@@ -215,7 +229,7 @@ OpenRouter study-note and chat features send selected slide PNGs and your prompt
 - The app extracts slide screenshots, not editable slide text.
 - PPTX output places each extracted slide image on a slide while preserving the extracted video frame aspect ratio; it does not reconstruct native PowerPoint shapes.
 - Videos with live handwriting, frequent cursor movement, animated slides, or speaker overlays may need a lower threshold or manual cleanup.
-- GPU/Metal comparison is not implemented in v2.1.0; the engine is structured so acceleration can be added later.
+- GPU/Metal comparison is not implemented in v2.2.0; the engine is structured so acceleration can be added later.
 
 ## Build From Source
 
