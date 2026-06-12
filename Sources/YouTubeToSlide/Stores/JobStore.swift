@@ -8,10 +8,16 @@ final class JobStore: ObservableObject {
     @Published var settings: AppSettings
     @Published var toolStatus: ToolStatus
     @Published var isProcessing = false
+    @Published var isGeneratingStudyNotes = false
+    @Published var studyProgress = 0.0
     @Published var installingFormula: String?
+    @Published var hasOpenRouterAPIKey: Bool
+    @Published var openRouterAPIKeyInput = ""
+    @Published var selectedSlideIndex: Int?
     @Published var message: String?
 
     private var processingTask: Task<Void, Never>?
+    private var studyTask: Task<Void, Never>?
     private let supportedVideoExtensions: Set<String> = [
         "mp4", "mov", "m4v", "avi", "mkv", "webm", "wmv", "flv", "mpg", "mpeg"
     ]
@@ -23,6 +29,7 @@ final class JobStore: ObservableObject {
         }
         self.settings = initialSettings
         self.toolStatus = ToolResolver.resolve()
+        self.hasOpenRouterAPIKey = KeychainService.loadOpenRouterAPIKey() != nil
     }
 
     var selectedJob: ExtractionJob? {
@@ -30,6 +37,19 @@ final class JobStore: ObservableObject {
             return jobs.first
         }
         return jobs.first(where: { $0.id == selectedJobID })
+    }
+
+    var selectedSlide: SlideFrame? {
+        guard let selectedJob else {
+            return nil
+        }
+
+        if let selectedSlideIndex,
+           let slide = selectedJob.slides.first(where: { $0.index == selectedSlideIndex }) {
+            return slide
+        }
+
+        return selectedJob.slides.first
     }
 
     func refreshTools() {
@@ -56,6 +76,7 @@ final class JobStore: ObservableObject {
             )
             jobs.append(job)
             selectedJobID = job.id
+            selectedSlideIndex = nil
         }
     }
 
@@ -83,6 +104,7 @@ final class JobStore: ObservableObject {
         )
         jobs.append(job)
         selectedJobID = job.id
+        selectedSlideIndex = nil
     }
 
     func installYtDlp() {
@@ -93,6 +115,34 @@ final class JobStore: ObservableObject {
         installFormula("ffmpeg")
     }
 
+    func saveOpenRouterAPIKey() {
+        let trimmed = openRouterAPIKeyInput.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            message = "Enter an OpenRouter API key first."
+            return
+        }
+
+        do {
+            try KeychainService.saveOpenRouterAPIKey(trimmed)
+            hasOpenRouterAPIKey = true
+            openRouterAPIKeyInput = ""
+            message = "OpenRouter API key saved to Keychain."
+        } catch {
+            message = error.localizedDescription
+        }
+    }
+
+    func clearOpenRouterAPIKey() {
+        do {
+            try KeychainService.deleteOpenRouterAPIKey()
+            hasOpenRouterAPIKey = false
+            openRouterAPIKeyInput = ""
+            message = "OpenRouter API key removed."
+        } catch {
+            message = error.localizedDescription
+        }
+    }
+
     func removeSelectedJob() {
         guard let selectedJobID else {
             return
@@ -101,6 +151,7 @@ final class JobStore: ObservableObject {
             job.id == selectedJobID && (job.status == .queued || job.status.isTerminal)
         }
         self.selectedJobID = jobs.first?.id
+        self.selectedSlideIndex = jobs.first?.slides.first?.index
     }
 
     func setOutputDirectory(_ url: URL, for jobID: UUID) {
@@ -120,6 +171,10 @@ final class JobStore: ObservableObject {
             return
         }
         NSWorkspace.shared.activateFileViewerSelecting([job.outputDirectory])
+    }
+
+    func selectSlide(_ slideIndex: Int) {
+        selectedSlideIndex = slideIndex
     }
 
     func startProcessing() {
@@ -203,6 +258,9 @@ final class JobStore: ObservableObject {
                         job.progress = 1.0
                         job.status = .completed
                     }
+                    if self.selectedJobID == jobID {
+                        self.selectedSlideIndex = result.export.slides.first?.index
+                    }
                 } catch {
                     self.updateJob(jobID) { job in
                         job.status = .failed(error.localizedDescription)
@@ -212,6 +270,94 @@ final class JobStore: ObservableObject {
 
             self.isProcessing = false
             self.processingTask = nil
+        }
+    }
+
+    func generateSelectedSlideStudyNote() {
+        guard let job = selectedJob,
+              let slide = selectedSlide else {
+            message = "Select a slide first."
+            return
+        }
+
+        generateStudyNotes(jobID: job.id, slides: [slide])
+    }
+
+    func generateAllSlideStudyNotes() {
+        guard let job = selectedJob else {
+            message = "Select a completed job first."
+            return
+        }
+
+        guard !job.slides.isEmpty else {
+            message = "Extract slides before generating study notes."
+            return
+        }
+
+        generateStudyNotes(jobID: job.id, slides: job.slides)
+    }
+
+    func askStudyQuestion(_ question: String, scope: StudyChatScope) {
+        let trimmed = question.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            return
+        }
+
+        guard let job = selectedJob else {
+            message = "Select a job first."
+            return
+        }
+
+        guard let apiKey = openRouterAPIKey() else {
+            message = "Enter and save an OpenRouter API key first."
+            return
+        }
+
+        let modelID = settings.studyModelID
+        let selectedSlideSnapshot = selectedSlide
+
+        updateJob(job.id) { job in
+            job.chatMessages.append(StudyChatMessage(role: .user, content: trimmed))
+        }
+
+        Task { [weak self] in
+            guard let self else { return }
+            do {
+                let response = try await Task.detached(priority: .userInitiated) {
+                    let client = OpenRouterClient(apiKey: apiKey, modelID: modelID)
+                    return try await client.answerQuestion(
+                        question: trimmed,
+                        job: job,
+                        selectedSlide: selectedSlideSnapshot,
+                        scope: scope
+                    )
+                }.value
+
+                self.updateJob(job.id) { job in
+                    job.chatMessages.append(StudyChatMessage(role: .assistant, content: response))
+                }
+            } catch {
+                self.updateJob(job.id) { job in
+                    job.chatMessages.append(StudyChatMessage(role: .assistant, content: "Error: \(error.localizedDescription)"))
+                }
+            }
+        }
+    }
+
+    func exportStudyMarkdownForSelectedJob() {
+        guard let job = selectedJob else {
+            message = "Select a job first."
+            return
+        }
+
+        do {
+            let outputURL = try StudyMarkdownExporter().export(job: job)
+            updateJob(job.id) { job in
+                job.studyMarkdownURL = outputURL
+            }
+            message = "Markdown study notes exported: \(outputURL.lastPathComponent)"
+        } catch {
+            message = error.localizedDescription
         }
     }
 
@@ -252,6 +398,70 @@ final class JobStore: ObservableObject {
             }
             self.installingFormula = nil
         }
+    }
+
+    private func generateStudyNotes(jobID: UUID, slides: [SlideFrame]) {
+        guard !isGeneratingStudyNotes else {
+            return
+        }
+
+        guard let apiKey = openRouterAPIKey() else {
+            message = "Enter and save an OpenRouter API key first."
+            return
+        }
+
+        guard let jobSnapshot = jobs.first(where: { $0.id == jobID }) else {
+            return
+        }
+
+        let modelID = settings.studyModelID
+        isGeneratingStudyNotes = true
+        studyProgress = 0
+
+        studyTask = Task { [weak self] in
+            guard let self else { return }
+            let client = OpenRouterClient(apiKey: apiKey, modelID: modelID)
+
+            for (offset, slide) in slides.enumerated() {
+                if Task.isCancelled {
+                    break
+                }
+
+                do {
+                    let note = try await client.generateStudyNote(slide: slide, lectureTitle: jobSnapshot.title)
+                    self.updateJob(jobID) { job in
+                        job.studyNotes[slide.index] = note
+                    }
+                } catch {
+                    self.message = "Slide \(slide.index) study note failed: \(error.localizedDescription)"
+                    break
+                }
+
+                self.studyProgress = Double(offset + 1) / Double(slides.count)
+            }
+
+            if self.settings.exportMarkdown,
+               let refreshedJob = self.jobs.first(where: { $0.id == jobID }),
+               !refreshedJob.studyNotes.isEmpty,
+               let outputURL = try? StudyMarkdownExporter().export(job: refreshedJob) {
+                self.updateJob(jobID) { job in
+                    job.studyMarkdownURL = outputURL
+                }
+            }
+
+            self.isGeneratingStudyNotes = false
+            self.studyTask = nil
+        }
+    }
+
+    private func openRouterAPIKey() -> String? {
+        let apiKey = KeychainService.loadOpenRouterAPIKey()?.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let apiKey, !apiKey.isEmpty else {
+            hasOpenRouterAPIKey = false
+            return nil
+        }
+        hasOpenRouterAPIKey = true
+        return apiKey
     }
 
     private func deduplicatedOutputDirectory(_ proposed: URL) -> URL {

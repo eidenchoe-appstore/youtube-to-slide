@@ -7,7 +7,7 @@
 
 Turn lecture videos into slide images, PDFs, and PowerPoint decks on macOS.
 
-YouTube to Slide is a local macOS app for extracting mostly static lecture slides from YouTube links and video files. Drop in a lecture recording, tune the sampling and change threshold, then export the detected slides as PNG files, a PDF, or a PPTX deck.
+YouTube to Slide is a local macOS app for extracting mostly static lecture slides from YouTube links and video files. Drop in a lecture recording, tune the sampling and change threshold, then export the detected slides as PNG files, a PDF, or a PPTX deck. If you provide an OpenRouter API key, the app can also turn extracted slide PNGs into study notes and chat context with a vision-language model.
 
 > The app is designed for screen-share lecture videos. It does not use AI, OCR, CLIP embeddings, or cloud processing.
 
@@ -19,6 +19,9 @@ YouTube to Slide is a local macOS app for extracting mostly static lecture slide
 - Detect slide changes with frame sampling and pixel-change ratio
 - Default 2.5 second sampling interval and 1% slide-change threshold
 - Export PNG slide folders by default, with optional PDF, PPTX, and timeline JSON
+- Generate slide-by-slide study notes with OpenRouter vision models
+- Chat about a selected slide or the whole lecture
+- Export Notion-friendly Markdown with relative PNG image links
 - Keep output next to the source video by default
 - Choose per-job and global output folders
 - Tune sampling interval, pixel delta, threshold, comparison width, and output resolution
@@ -51,6 +54,34 @@ The app looks for tools in this order:
 /usr/local/bin
 PATH
 ```
+
+AI study notes require your own OpenRouter API key. The key is stored in macOS Keychain and is only used when you click study-note or chat buttons.
+
+## AI Study Notes
+
+After extracting slides, open **AI Study Notes** in the inspector:
+
+1. Paste your OpenRouter API key.
+2. Click **Save Key**.
+3. Choose a model.
+4. Click **Study Selected**, **Study All Slides**, or ask a question in the chat box.
+5. Click **Export Markdown** to create a Notion-friendly study note file.
+
+Default model:
+
+```text
+nvidia/nemotron-nano-12b-v2-vl:free
+```
+
+Model choices:
+
+| Model | Best For |
+| --- | --- |
+| `nvidia/nemotron-nano-12b-v2-vl:free` | Default. OCR, document understanding, charts, and slide-level multimodal comprehension |
+| `google/gemma-4-31b-it:free` | Strong image understanding, multilingual explanation, long-context synthesis, and instruction following |
+| `nvidia/llama-nemotron-rerank-vl-1b-v2:free` | Fast lightweight visual relevance checks when speed matters |
+
+The app sends selected PNG slide images to OpenRouter only when you explicitly run a study or chat action.
 
 ## How It Works
 
@@ -120,6 +151,7 @@ VideoTitle/
   VideoTitle.pdf
   VideoTitle.pptx
   VideoTitle.timeline.json
+  VideoTitle.study-notes.md
 ```
 
 ## Output Formats
@@ -130,6 +162,7 @@ VideoTitle/
 | PDF | Best for reading, printing, and sharing |
 | PPTX | Best for opening the result as a PowerPoint deck; slide size keeps the extracted video frame aspect ratio |
 | Timeline JSON | Best for auditing timestamps and change ratios |
+| Markdown notes | Best for Notion import; includes `![Slide](./slide.png)` relative links |
 
 ## Tuning
 
@@ -151,13 +184,16 @@ Processing is local. Local videos stay on your Mac. YouTube links are downloaded
 
 The YouTube preview card uses YouTube's public preview metadata and thumbnail URL for the pasted link.
 
+OpenRouter study-note and chat features send selected slide PNGs and your prompt to OpenRouter only after you click the relevant buttons. The API key is stored in Keychain.
+
 ## Limitations
 
 - YouTube support depends on `yt-dlp` and the availability of the public video URL.
+- AI study-note quality and rate limits depend on the selected OpenRouter model and provider availability.
 - The app extracts slide screenshots, not editable slide text.
 - PPTX output places each extracted slide image on a slide while preserving the extracted video frame aspect ratio; it does not reconstruct native PowerPoint shapes.
 - Videos with live handwriting, frequent cursor movement, animated slides, or speaker overlays may need a lower threshold or manual cleanup.
-- GPU/Metal comparison is not implemented in v1.0.3; the engine is structured so acceleration can be added later.
+- GPU/Metal comparison is not implemented in v1.1.0; the engine is structured so acceleration can be added later.
 
 ## Build From Source
 

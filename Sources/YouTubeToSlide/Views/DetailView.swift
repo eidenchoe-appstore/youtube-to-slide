@@ -2,6 +2,7 @@ import AppKit
 import SwiftUI
 
 struct DetailView: View {
+    @EnvironmentObject private var store: JobStore
     var job: ExtractionJob
 
     private let columns = [
@@ -25,9 +26,17 @@ struct DetailView: View {
                 if job.slides.isEmpty {
                     DropZoneView()
                 } else {
+                    StudyPanelView(job: job)
+
                     LazyVGrid(columns: columns, spacing: 16) {
                         ForEach(job.slides) { slide in
-                            SlideThumbnailView(slide: slide)
+                            SlideThumbnailView(
+                                slide: slide,
+                                isSelected: store.selectedSlideIndex == slide.index || (store.selectedSlideIndex == nil && slide.index == job.slides.first?.index)
+                            )
+                            .onTapGesture {
+                                store.selectSlide(slide.index)
+                            }
                         }
                     }
                 }
@@ -74,6 +83,7 @@ struct DetailView: View {
 
 private struct SlideThumbnailView: View {
     var slide: SlideFrame
+    var isSelected: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -94,7 +104,7 @@ private struct SlideThumbnailView: View {
             .clipShape(RoundedRectangle(cornerRadius: 8))
             .overlay {
                 RoundedRectangle(cornerRadius: 8)
-                    .strokeBorder(Color.secondary.opacity(0.15))
+                    .strokeBorder(isSelected ? Color.blue : Color.secondary.opacity(0.15), lineWidth: isSelected ? 3 : 1)
             }
 
             HStack {

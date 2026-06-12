@@ -8,6 +8,7 @@ struct InspectorView: View {
             VStack(alignment: .leading, spacing: 22) {
                 processingSection
                 outputSection
+                studySection
                 selectedJobSection
                 accelerationSection
             }
@@ -45,6 +46,7 @@ struct InspectorView: View {
                 Toggle("PNG folder", isOn: $store.settings.exportPNG)
                 Toggle("PDF", isOn: $store.settings.exportPDF)
                 Toggle("PPTX", isOn: $store.settings.exportPPTX)
+                Toggle("Markdown study notes", isOn: $store.settings.exportMarkdown)
 
                 Picker("Resolution", selection: $store.settings.resolution) {
                     ForEach(ResolutionPreset.allCases) { preset in
@@ -79,6 +81,51 @@ struct InspectorView: View {
                         }
                     }
                 }
+            }
+        }
+    }
+
+    private var studySection: some View {
+        InspectorSection("AI Study Notes") {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Image(systemName: store.hasOpenRouterAPIKey ? "checkmark.circle.fill" : "key.fill")
+                        .foregroundStyle(store.hasOpenRouterAPIKey ? .green : .secondary)
+                    Text(store.hasOpenRouterAPIKey ? "OpenRouter API key saved" : "OpenRouter API key required")
+                        .font(.callout)
+                }
+
+                SecureField("OpenRouter API key", text: $store.openRouterAPIKeyInput)
+                    .textFieldStyle(.roundedBorder)
+
+                HStack {
+                    Button("Save Key") {
+                        store.saveOpenRouterAPIKey()
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(store.openRouterAPIKeyInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+
+                    Button("Clear") {
+                        store.clearOpenRouterAPIKey()
+                    }
+                    .disabled(!store.hasOpenRouterAPIKey)
+                }
+
+                Picker("Model", selection: $store.settings.studyModelID) {
+                    ForEach(OpenRouterStudyModel.allCases) { model in
+                        Text("\(model.displayName) - \(model.badge)")
+                            .tag(model.id)
+                    }
+                }
+
+                let model = OpenRouterStudyModel.model(for: store.settings.studyModelID)
+                Text(model.id)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .textSelection(.enabled)
+                Text(model.advantage)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
         }
     }
