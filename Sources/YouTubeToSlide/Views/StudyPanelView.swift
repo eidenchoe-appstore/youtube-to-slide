@@ -3,13 +3,31 @@ import SwiftUI
 struct StudyPanelView: View {
     @EnvironmentObject private var store: JobStore
     var job: ExtractionJob
+    var showsHeader = true
+    var usesContainer = true
 
     @State private var chatScope: StudyChatScope = .selectedSlide
     @State private var chatInput = ""
 
     var body: some View {
+        if usesContainer {
+            content
+                .padding(16)
+                .background(Color.secondary.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 8)
+                        .strokeBorder(Color.secondary.opacity(0.14))
+                }
+        } else {
+            content
+        }
+    }
+
+    private var content: some View {
         VStack(alignment: .leading, spacing: 14) {
-            header
+            if showsHeader {
+                header
+            }
 
             HStack(spacing: 10) {
                 Button {
@@ -29,17 +47,22 @@ struct StudyPanelView: View {
                 .disabled(!store.hasOpenRouterAPIKey || store.isGeneratingStudyNotes || job.slides.isEmpty)
 
                 Button {
-                    store.exportNoteToNotionPageForSelectedJob()
+                    store.createNoteToNotionPageForSelectedJob()
                 } label: {
-                    Label("Note to Notion Page", systemImage: "square.and.arrow.down.on.square")
+                    Label(store.isCreatingNotionPage ? "Creating Notion Page" : "Note to Notion Page", systemImage: "doc.richtext")
                 }
+                .buttonStyle(.borderedProminent)
+                .tint(.blue)
                 .disabled(job.slides.isEmpty)
+                .disabled(store.isGeneratingStudyNotes)
+                .disabled(!store.hasOpenRouterAPIKey && !allSlidesHaveNotes)
+                .help("Generate study notes for every slide, then export one Notion-ready HTML + assets ZIP.")
 
                 Spacer()
             }
 
-            if !store.hasOpenRouterAPIKey {
-                Label("Save an OpenRouter API key in the inspector to enable study notes and chat.", systemImage: "lock.fill")
+            if !store.hasOpenRouterAPIKey && !allSlidesHaveNotes {
+                Label("Save an OpenRouter API key in the inspector to generate full-deck study notes and Notion pages.", systemImage: "lock.fill")
                     .font(.callout)
                     .foregroundStyle(.secondary)
                     .padding(10)
@@ -49,6 +72,9 @@ struct StudyPanelView: View {
 
             if store.isGeneratingStudyNotes {
                 ProgressView(value: store.studyProgress)
+                Text(store.isCreatingNotionPage ? "Generating notes for the full Notion page..." : "Generating study notes...")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
 
             notePreview
@@ -57,11 +83,16 @@ struct StudyPanelView: View {
 
             chatView
         }
-        .padding(16)
-        .background(Color.secondary.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
-        .overlay {
-            RoundedRectangle(cornerRadius: 8)
-                .strokeBorder(Color.secondary.opacity(0.14))
+    }
+
+    private var allSlidesHaveNotes: Bool {
+        guard !job.slides.isEmpty else {
+            return false
+        }
+
+        return job.slides.allSatisfy { slide in
+            let note = job.studyNotes[slide.index]?.markdown.trimmingCharacters(in: .whitespacesAndNewlines)
+            return !(note?.isEmpty ?? true)
         }
     }
 
@@ -105,7 +136,7 @@ struct StudyPanelView: View {
                 .padding(10)
                 .background(.background, in: RoundedRectangle(cornerRadius: 8))
             } else {
-                Text("Select a slide and click Study Selected, or generate notes for all slides.")
+                Text("Select a slide and click Study Selected, or click Note to Notion Page to generate notes for the full deck and export a Notion-ready ZIP.")
                     .font(.callout)
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, alignment: .leading)

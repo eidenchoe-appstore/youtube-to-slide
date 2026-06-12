@@ -9,6 +9,7 @@ final class JobStore: ObservableObject {
     @Published var toolStatus: ToolStatus
     @Published var isProcessing = false
     @Published var isGeneratingStudyNotes = false
+    @Published var isCreatingNotionPage = false
     @Published var studyProgress = 0.0
     @Published var installingFormula: String?
     @Published var hasOpenRouterAPIKey: Bool
@@ -344,18 +345,41 @@ final class JobStore: ObservableObject {
         }
     }
 
-    func exportNoteToNotionPageForSelectedJob() {
+    func createNoteToNotionPageForSelectedJob() {
         guard let job = selectedJob else {
             message = "Select a job first."
             return
         }
 
+        guard !job.slides.isEmpty else {
+            message = "Extract slides before creating a Notion page."
+            return
+        }
+
+        let missingSlides = job.slides.filter { slide in
+            let note = job.studyNotes[slide.index]?.markdown.trimmingCharacters(in: .whitespacesAndNewlines)
+            return note?.isEmpty ?? true
+        }
+
+        guard missingSlides.isEmpty else {
+            generateStudyNotes(jobID: job.id, slides: missingSlides, exportNotionPageAfterCompletion: true)
+            return
+        }
+
+        exportNotionPage(job: job)
+    }
+
+    func exportNoteToNotionPageForSelectedJob() {
+        createNoteToNotionPageForSelectedJob()
+    }
+
+    private func exportNotionPage(job: ExtractionJob) {
         do {
             let outputURL = try NotionZipExporter().export(job: job)
             updateJob(job.id) { job in
                 job.notionZipURL = outputURL
             }
-            message = "Note to Notion Page ZIP created: \(outputURL.lastPathComponent)"
+            message = "Full Note to Notion Page ZIP created: \(outputURL.lastPathComponent)"
         } catch {
             message = error.localizedDescription
         }
@@ -400,8 +424,21 @@ final class JobStore: ObservableObject {
         }
     }
 
-    private func generateStudyNotes(jobID: UUID, slides: [SlideFrame]) {
+    private func generateStudyNotes(
+        jobID: UUID,
+        slides: [SlideFrame],
+        exportNotionPageAfterCompletion: Bool = false
+    ) {
         guard !isGeneratingStudyNotes else {
+            message = "A study-note task is already running."
+            return
+        }
+
+        guard !slides.isEmpty else {
+            if exportNotionPageAfterCompletion,
+               let job = jobs.first(where: { $0.id == jobID }) {
+                exportNotionPage(job: job)
+            }
             return
         }
 
@@ -416,14 +453,17 @@ final class JobStore: ObservableObject {
 
         let modelID = settings.studyModelID
         isGeneratingStudyNotes = true
+        isCreatingNotionPage = exportNotionPageAfterCompletion
         studyProgress = 0
 
         studyTask = Task { [weak self] in
             guard let self else { return }
             let client = OpenRouterClient(apiKey: apiKey, modelID: modelID)
+            var completed = true
 
             for (offset, slide) in slides.enumerated() {
                 if Task.isCancelled {
+                    completed = false
                     break
                 }
 
@@ -434,13 +474,21 @@ final class JobStore: ObservableObject {
                     }
                 } catch {
                     self.message = "Slide \(slide.index) study note failed: \(error.localizedDescription)"
+                    completed = false
                     break
                 }
 
                 self.studyProgress = Double(offset + 1) / Double(slides.count)
             }
 
+            if exportNotionPageAfterCompletion,
+               completed,
+               let refreshedJob = self.jobs.first(where: { $0.id == jobID }) {
+                self.exportNotionPage(job: refreshedJob)
+            }
+
             self.isGeneratingStudyNotes = false
+            self.isCreatingNotionPage = false
             self.studyTask = nil
         }
     }

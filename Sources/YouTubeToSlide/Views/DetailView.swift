@@ -4,6 +4,9 @@ import SwiftUI
 struct DetailView: View {
     @EnvironmentObject private var store: JobStore
     var job: ExtractionJob
+    @State private var isProcessingExpanded = true
+    @State private var isSlidesExpanded = true
+    @State private var isStudyExpanded = true
 
     private let columns = [
         GridItem(.adaptive(minimum: 180, maximum: 260), spacing: 16)
@@ -23,9 +26,35 @@ struct DetailView: View {
                         .background(Color.red.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
                 }
 
-                processingSection
-                slidesSection
-                StudyPanelView(job: job)
+                CollapsibleWorkspaceSection(
+                    title: "Processing",
+                    subtitle: "Preview the lecture input and run slide extraction.",
+                    systemImage: "play.rectangle",
+                    badge: job.status.label,
+                    isExpanded: $isProcessingExpanded
+                ) {
+                    processingSection
+                }
+
+                CollapsibleWorkspaceSection(
+                    title: "PNG Slides",
+                    subtitle: "Review extracted screenshots and choose a slide for study/chat.",
+                    systemImage: "rectangle.stack",
+                    badge: "\(job.slides.count) slides",
+                    isExpanded: $isSlidesExpanded
+                ) {
+                    slidesSection
+                }
+
+                CollapsibleWorkspaceSection(
+                    title: "Chat & Study",
+                    subtitle: "Generate full-deck study notes and export a Notion page ZIP.",
+                    systemImage: "doc.richtext",
+                    badge: "\(job.studyNotes.count)/\(job.slides.count) noted",
+                    isExpanded: $isStudyExpanded
+                ) {
+                    StudyPanelView(job: job, showsHeader: false, usesContainer: false)
+                }
             }
             .padding(24)
         }
@@ -68,11 +97,6 @@ struct DetailView: View {
 
     private var processingSection: some View {
         VStack(alignment: .leading, spacing: 14) {
-            WorkspaceSectionHeader(
-                title: "Processing",
-                subtitle: "Preview the lecture input and run slide extraction."
-            )
-
             HStack(alignment: .top, spacing: 16) {
                 VideoPreviewView(job: job)
                     .frame(minWidth: 420, maxWidth: .infinity)
@@ -136,21 +160,10 @@ struct DetailView: View {
                 .frame(width: 300)
             }
         }
-        .padding(16)
-        .background(Color.secondary.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
-        .overlay {
-            RoundedRectangle(cornerRadius: 8)
-                .strokeBorder(Color.secondary.opacity(0.14))
-        }
     }
 
     private var slidesSection: some View {
         VStack(alignment: .leading, spacing: 14) {
-            WorkspaceSectionHeader(
-                title: "PNG Slides",
-                subtitle: "Extracted slide screenshots appear here. Select one to study or chat about it."
-            )
-
             if job.slides.isEmpty {
                 VStack(spacing: 10) {
                     Image(systemName: "photo.on.rectangle.angled")
@@ -178,26 +191,69 @@ struct DetailView: View {
                 }
             }
         }
-        .padding(16)
+    }
+}
+
+private struct CollapsibleWorkspaceSection<Content: View>: View {
+    var title: String
+    var subtitle: String
+    var systemImage: String
+    var badge: String
+    @Binding var isExpanded: Bool
+    @ViewBuilder var content: Content
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Button {
+                withAnimation(.easeInOut(duration: 0.18)) {
+                    isExpanded.toggle()
+                }
+            } label: {
+                HStack(spacing: 12) {
+                    Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .frame(width: 16)
+
+                    Image(systemName: systemImage)
+                        .foregroundStyle(.blue)
+                        .frame(width: 22)
+
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(title)
+                            .font(.headline)
+                            .foregroundStyle(.primary)
+                        Text(subtitle)
+                            .font(.callout)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(2)
+                    }
+
+                    Spacer()
+
+                    Text(badge)
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(.quaternary, in: Capsule())
+                }
+                .contentShape(Rectangle())
+                .padding(14)
+            }
+            .buttonStyle(.plain)
+
+            if isExpanded {
+                Divider()
+                content
+                    .padding(16)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+        }
         .background(Color.secondary.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
         .overlay {
             RoundedRectangle(cornerRadius: 8)
                 .strokeBorder(Color.secondary.opacity(0.14))
-        }
-    }
-}
-
-private struct WorkspaceSectionHeader: View {
-    var title: String
-    var subtitle: String
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 3) {
-            Text(title)
-                .font(.headline)
-            Text(subtitle)
-                .font(.callout)
-                .foregroundStyle(.secondary)
         }
     }
 }

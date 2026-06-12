@@ -1,6 +1,6 @@
 # OpenRouter Setup for YouTube to Slide
 
-YouTube to Slide can generate slide-by-slide study notes and chat answers with OpenRouter vision-language models. The slide extraction pipeline does not require OpenRouter. OpenRouter is only needed when you click **Study Selected**, **Study All Slides**, or chat actions.
+YouTube to Slide can generate slide-by-slide study notes and chat answers with OpenRouter vision-language models. The slide extraction pipeline does not require OpenRouter. OpenRouter is only needed when you click **Study Selected**, **Study All Slides**, **Note to Notion Page** with missing notes, or chat actions.
 
 Official OpenRouter docs:
 
@@ -51,7 +51,7 @@ Free models can have provider-side rate limits or temporary availability issues.
 
 1. Select a processed job.
 2. Select a slide in **PNG Slides**.
-3. Click **Study Selected** for one slide, or **Study All Slides** for the whole deck.
+3. Click **Study Selected** for one slide, **Study All Slides** for manual full-deck note generation, or **Note to Notion Page** for the complete full-deck Notion export workflow.
 
 The VLM is prompted to infer a slide title and create a study-note structure:
 
@@ -76,7 +76,7 @@ The VLM is prompted to infer a slide title and create a study-note structure:
 
 ## 5. Export a Notion Page ZIP
 
-Click **Note to Notion Page** after generating notes.
+Click **Note to Notion Page** after slide extraction. The app checks the full deck, generates missing notes for every slide, then creates the Notion-ready ZIP.
 
 The app creates:
 

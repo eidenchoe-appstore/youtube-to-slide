@@ -21,7 +21,8 @@ YouTube to Slide is a local macOS app for extracting mostly static lecture slide
 - Export PNG slide folders by default, with optional PDF, PPTX, and timeline JSON
 - Generate slide-by-slide study notes with OpenRouter vision models
 - Chat about a selected slide or the whole lecture
-- Create a **Note to Notion Page** ZIP containing HTML plus slide PNG assets
+- Create a full-deck **Note to Notion Page** ZIP that generates missing slide notes and packages HTML plus PNG assets
+- Collapse or expand Processing, PNG Slides, and Chat & Study sections in the main workspace
 - Keep output next to the source video by default
 - Choose per-job and global output folders
 - Tune sampling interval, pixel delta, threshold, comparison width, and output resolution
@@ -66,8 +67,8 @@ After extracting slides, save an OpenRouter API key in the inspector:
 1. Paste your OpenRouter API key.
 2. Click **Save Key**.
 3. Choose a model.
-4. Click **Study Selected**, **Study All Slides**, or ask a question in the chat box.
-5. Click **Note to Notion Page** to create a ZIP with an HTML page and slide image assets.
+4. Click **Study Selected**, **Study All Slides**, or ask a question in the chat box when you want manual study actions.
+5. Click **Note to Notion Page** to generate missing notes for every slide and create a ZIP with one HTML page and slide image assets.
 
 The ZIP is intended for Notion import: it contains `Title.html` and an `assets/` folder with the referenced PNG slides.
 
@@ -178,7 +179,7 @@ VideoTitle/
 | PDF | Best for reading, printing, and sharing |
 | PPTX | Best for opening the result as a PowerPoint deck; slide size keeps the extracted video frame aspect ratio |
 | Timeline JSON | Best for auditing timestamps and change ratios |
-| Note to Notion Page ZIP | Best for importing study notes and slide images together into Notion; contains Notion-style HTML plus an `assets/` folder |
+| Note to Notion Page ZIP | Best for importing a full-deck study page into Notion; generates missing notes for every slide, then packages Notion-style HTML plus an `assets/` folder |
 
 ## Tuning
 
@@ -209,7 +210,7 @@ OpenRouter study-note and chat features send selected slide PNGs and your prompt
 - The app extracts slide screenshots, not editable slide text.
 - PPTX output places each extracted slide image on a slide while preserving the extracted video frame aspect ratio; it does not reconstruct native PowerPoint shapes.
 - Videos with live handwriting, frequent cursor movement, animated slides, or speaker overlays may need a lower threshold or manual cleanup.
-- GPU/Metal comparison is not implemented in v1.2.2; the engine is structured so acceleration can be added later.
+- GPU/Metal comparison is not implemented in v2.0.0; the engine is structured so acceleration can be added later.
 
 ## Build From Source
 
