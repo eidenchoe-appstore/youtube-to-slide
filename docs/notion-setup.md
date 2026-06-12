@@ -61,6 +61,19 @@ show Open in Notion when finished
 
 For local videos, the Notion page title uses the video filename without the extension. For YouTube jobs, the page title uses the resolved YouTube title.
 
+## Rich Formatting Support
+
+Study notes are converted into native Notion blocks and rich text before upload. The app currently supports:
+
+- Headings, paragraphs, dividers, quotes, bulleted lists, numbered lists, and to-do items
+- **Bold**, *italic*, ~~strikethrough~~, underline spans, inline code, links, inline math, and inline colors
+- Fenced code blocks and block equations
+- Simple Markdown tables converted to Notion table blocks
+- `<callout icon="..." color="...">` blocks with child content
+- Block colors with `{color="..."}` and inline colors with `<span color="...">...</span>`
+
+The app uploads slide images separately, so generated study notes should not include Markdown image syntax.
+
 ## Troubleshooting
 
 ### `object_not_found` mentions the wrong integration name

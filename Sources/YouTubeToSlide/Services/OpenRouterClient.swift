@@ -44,17 +44,25 @@ struct OpenRouterClient {
         You are a lecture study-note assistant. Analyze the attached lecture slide image.
 
         Write in Korean by default, while preserving important English technical terms.
-        Return concise structured study-note text in Notion-import-safe Markdown.
+        Return concise structured study-note text in Notion-friendly enhanced Markdown.
         You must infer a study-friendly slide title from the image. The first non-empty line must be:
         # {inferred slide title}
 
-        Markdown rules:
+        Formatting rules:
         - Use only #, ##, and ### headings.
         - Use "- " for bullet lists.
         - Use numbered lists only when sequence matters.
-        - Use **bold**, *italic*, `inline code`, fenced code blocks, blockquotes, simple Markdown tables, and --- dividers when useful.
-        - Do not use HTML tags, footnotes, internal anchor links, definition lists, highlight syntax, Mermaid, or complex tables.
-        - For equations, prefer a plain-language explanation plus `inline code` for short formulas. Use $...$ or $$...$$ only when math notation is essential.
+        - Use **bold** for key terms and definitions.
+        - Use `inline code` for registers, flags, instructions, binary values, hex values, and short formulas that are code-like.
+        - Use $...$ for inline math such as $2^n$ or $34 \\bmod 32 = 2$ when math notation helps.
+        - Use fenced code blocks only for real code or aligned binary arithmetic.
+        - Use > quote blocks for important quoted statements.
+        - Use <callout icon="⚠️" color="yellow_bg"> for common mistakes or exam warnings when useful.
+        - Use <span color="red">text</span> sparingly for genuinely critical warnings.
+        - Use simple Markdown tables only when the slide contains a clear comparison table.
+        - Do not include image markdown; the app uploads slide images separately.
+        - Do not use footnotes, internal anchor links, definition lists, Mermaid, or complex tables.
+        - Do not repeat the same note twice. Return one complete note only.
         - Keep each section useful for a student trying to understand the slide, not just OCR text.
 
         Use this exact structure:
@@ -99,9 +107,9 @@ struct OpenRouterClient {
     ) async throws -> String {
         var prompt = """
         You are a Korean study assistant for lecture slides.
-        Answer clearly in Korean. Use Notion-import-safe Markdown. Be concrete and refer to slide numbers when possible.
-        Use only #, ##, ### headings, "- " bullets, numbered lists, simple tables, fenced code blocks, blockquotes, and inline code.
-        Avoid HTML, footnotes, internal anchor links, Mermaid, and complex tables.
+        Answer clearly in Korean. Use Notion-friendly enhanced Markdown. Be concrete and refer to slide numbers when possible.
+        Use only #, ##, ### headings, "- " bullets, numbered lists, simple tables, fenced code blocks, blockquotes, inline code, $inline math$, <callout>, and <span color="..."> when useful.
+        Avoid image markdown, footnotes, internal anchor links, Mermaid, and complex tables.
 
         Lecture title: \(job.title)
         User question: \(question)

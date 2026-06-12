@@ -61,6 +61,19 @@ token은 macOS Keychain에 저장됩니다. parent page URL은 앱 설정에 저
 
 로컬 영상은 확장자를 제외한 원본 영상 파일명을 Notion page title로 사용합니다. YouTube 작업은 확인된 YouTube 제목을 사용합니다.
 
+## Rich Formatting 지원
+
+공부노트는 업로드 전에 native Notion block과 rich text로 변환됩니다. 현재 앱이 지원하는 형식은 아래와 같습니다.
+
+- heading, paragraph, divider, quote, bullet list, numbered list, to-do item
+- **bold**, *italic*, ~~strikethrough~~, underline span, inline code, link, inline math, inline color
+- fenced code block과 block equation
+- 단순 Markdown table을 Notion table block으로 변환
+- child content를 포함한 `<callout icon="..." color="...">` block
+- `{color="..."}` block color와 `<span color="...">...</span>` inline color
+
+슬라이드 이미지는 앱이 별도로 업로드하므로, 생성된 공부노트에는 Markdown image syntax가 들어가지 않는 것이 좋습니다.
+
 ## 문제 해결
 
 ### `object_not_found`에 엉뚱한 integration 이름이 나오는 경우

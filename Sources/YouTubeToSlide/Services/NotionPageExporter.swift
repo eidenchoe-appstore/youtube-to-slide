@@ -311,93 +311,7 @@ struct NotionPageExporter {
     }
 
     private func markdownBlocks(from markdown: String) -> [[String: Any]] {
-        var blocks: [[String: Any]] = []
-        var codeLines: [String] = []
-        var isInCodeBlock = false
-        var tableLines: [String] = []
-
-        func flushTable() {
-            guard !tableLines.isEmpty else { return }
-            blocks.append(codeBlock(tableLines.joined(separator: "\n"), language: "markdown"))
-            tableLines.removeAll()
-        }
-
-        func appendTextBlock(type: String, key: String, text: String, extra: [String: Any] = [:]) {
-            for chunk in splitText(text) {
-                var payload: [String: Any] = [
-                    "rich_text": richText(chunk),
-                    "color": "default"
-                ]
-                for (key, value) in extra {
-                    payload[key] = value
-                }
-                blocks.append([
-                    "type": type,
-                    key: payload
-                ])
-            }
-        }
-
-        for rawLine in markdown
-            .replacingOccurrences(of: "\r\n", with: "\n")
-            .components(separatedBy: "\n") {
-            let trimmed = rawLine.trimmingCharacters(in: .whitespaces)
-
-            if trimmed.hasPrefix("```") {
-                flushTable()
-                if isInCodeBlock {
-                    blocks.append(codeBlock(codeLines.joined(separator: "\n"), language: "plain text"))
-                    codeLines.removeAll()
-                    isInCodeBlock = false
-                } else {
-                    isInCodeBlock = true
-                }
-                continue
-            }
-
-            if isInCodeBlock {
-                codeLines.append(rawLine)
-                continue
-            }
-
-            if trimmed.isEmpty {
-                flushTable()
-                continue
-            }
-
-            if trimmed.contains("|"),
-               trimmed.first == "|" || trimmed.contains(" | ") {
-                tableLines.append(rawLine)
-                continue
-            }
-
-            flushTable()
-
-            if trimmed == "---" || trimmed == "***" || trimmed == "___" {
-                blocks.append(dividerBlock())
-            } else if let heading = headingText(from: trimmed) {
-                blocks.append(headingBlock(level: 3, text: heading))
-            } else if trimmed.hasPrefix("- [ ] ") || trimmed.hasPrefix("- [x] ") || trimmed.hasPrefix("- [X] ") {
-                let checked = trimmed.hasPrefix("- [x] ") || trimmed.hasPrefix("- [X] ")
-                let content = String(trimmed.dropFirst(6)).trimmingCharacters(in: .whitespaces)
-                appendTextBlock(type: "to_do", key: "to_do", text: content, extra: ["checked": checked])
-            } else if trimmed.hasPrefix("- ") || trimmed.hasPrefix("* ") || trimmed.hasPrefix("+ ") {
-                appendTextBlock(type: "bulleted_list_item", key: "bulleted_list_item", text: String(trimmed.dropFirst(2)))
-            } else if let numbered = numberedListText(from: trimmed) {
-                appendTextBlock(type: "numbered_list_item", key: "numbered_list_item", text: numbered)
-            } else if trimmed.hasPrefix("> ") {
-                appendTextBlock(type: "quote", key: "quote", text: String(trimmed.dropFirst(2)))
-            } else {
-                appendTextBlock(type: "paragraph", key: "paragraph", text: trimmed)
-            }
-        }
-
-        if isInCodeBlock || !codeLines.isEmpty {
-            blocks.append(codeBlock(codeLines.joined(separator: "\n"), language: "plain text"))
-        }
-        flushTable()
-
-        return blocks
+        NotionMarkdownRenderer().blocks(from: markdown)
     }
 
     private func studyNoteTitleAndBody(_ markdown: String?) -> (title: String?, body: String) {
@@ -427,35 +341,6 @@ struct NotionPageExporter {
         }
 
         return (nil, lines.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines))
-    }
-
-    private func headingText(from line: String) -> String? {
-        guard line.hasPrefix("#") else {
-            return nil
-        }
-
-        let text = line.drop { $0 == "#" || $0 == " " }
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-        return text.isEmpty ? nil : String(text)
-    }
-
-    private func numberedListText(from line: String) -> String? {
-        guard let dotIndex = line.firstIndex(of: ".") else {
-            return nil
-        }
-
-        let prefix = line[..<dotIndex]
-        guard !prefix.isEmpty, prefix.allSatisfy(\.isNumber) else {
-            return nil
-        }
-
-        let afterDot = line.index(after: dotIndex)
-        guard afterDot < line.endIndex, line[afterDot] == " " else {
-            return nil
-        }
-
-        return String(line[line.index(after: afterDot)...])
-            .trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     private func headingBlock(level: Int, text: String) -> [String: Any] {
@@ -500,41 +385,8 @@ struct NotionPageExporter {
         ]
     }
 
-    private func codeBlock(_ text: String, language: String) -> [String: Any] {
-        [
-            "type": "code",
-            "code": [
-                "caption": [],
-                "rich_text": richText(text),
-                "language": language
-            ]
-        ]
-    }
-
     private func richText(_ text: String) -> [[String: Any]] {
-        splitText(text).map { chunk in
-            [
-                "type": "text",
-                "text": [
-                    "content": chunk
-                ]
-            ]
-        }
-    }
-
-    private func splitText(_ text: String, limit: Int = 1_900) -> [String] {
-        guard !text.isEmpty else {
-            return []
-        }
-
-        var chunks: [String] = []
-        var start = text.startIndex
-        while start < text.endIndex {
-            let end = text.index(start, offsetBy: limit, limitedBy: text.endIndex) ?? text.endIndex
-            chunks.append(String(text[start..<end]))
-            start = end
-        }
-        return chunks
+        NotionMarkdownRenderer().richText(text)
     }
 
     private func mimeType(for url: URL) -> String {
