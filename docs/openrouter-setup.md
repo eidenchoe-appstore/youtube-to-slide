@@ -36,19 +36,19 @@ The app stores the key in macOS Keychain. It does not write the key to the proje
 The default model order is:
 
 ```text
-First model: google/gemma-4-31b-it:free
+First model: nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free
 Second model: google/gemma-4-26b-a4b-it:free
 ```
 
-Select both **First model** and **Second model** in the **API Settings** tab. If the first model is rate-limited or temporarily unavailable, the app retries the same request with the second model. If both selectors use the same model, duplicate fallback is skipped.
+Select both **First model** and **Second model** in the **API Settings** tab. If the first model is rate-limited or temporarily unavailable, the app retries the same request with the second model. If both selectors use the same model, duplicate fallback is skipped. You can use the preset menu or type any OpenRouter model ID directly into each model ID field. OpenRouter will return an error if the typed model ID is invalid or unavailable for your account.
 
 Available model choices:
 
 | Model | Use Case |
 | --- | --- |
-| `google/gemma-4-31b-it:free` | Best default for slide understanding, multilingual summaries, and instruction-following |
-| `google/gemma-4-26b-a4b-it:free` | Balanced backup for Korean/English slide explanation with lower load than 31B |
-| `nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free` | Fast reasoning-oriented backup for quick slide study notes when throughput matters |
+| `nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free` | Default first model for fast reasoning-oriented slide study notes when throughput matters |
+| `google/gemma-4-26b-a4b-it:free` | Default fallback for Korean/English slide explanation with lower load than 31B |
+| `google/gemma-4-31b-it:free` | High-capacity option for slide understanding, multilingual summaries, and instruction-following |
 
 Free models can have provider-side rate limits or temporary availability issues. Configure a fallback model so the app can recover from many temporary model failures without manual retry.
 

@@ -33,10 +33,13 @@ struct OpenRouterClient {
         self.apiKey = apiKey
         var uniqueModelIDs: [String] = []
         for modelID in modelIDs
-        where OpenRouterStudyModel.isAvailable(modelID) && !uniqueModelIDs.contains(modelID) {
-            uniqueModelIDs.append(modelID)
+        where OpenRouterStudyModel.isUsableModelID(modelID) {
+            let trimmed = OpenRouterStudyModel.sanitizedModelID(modelID)
+            if !uniqueModelIDs.contains(trimmed) {
+                uniqueModelIDs.append(trimmed)
+            }
         }
-        self.modelIDs = uniqueModelIDs.isEmpty ? [OpenRouterStudyModel.gemma31B.id] : uniqueModelIDs
+        self.modelIDs = uniqueModelIDs.isEmpty ? [OpenRouterStudyModel.defaultPrimaryID] : uniqueModelIDs
     }
 
     func generateStudyNote(slide: SlideFrame, lectureTitle: String) async throws -> SlideStudyNote {

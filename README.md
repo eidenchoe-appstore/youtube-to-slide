@@ -86,19 +86,19 @@ Each generated study note is prompted to start with an inferred slide title and 
 Default model order:
 
 ```text
-First model: google/gemma-4-31b-it:free
+First model: nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free
 Second model: google/gemma-4-26b-a4b-it:free
 ```
 
-If the first model is rate-limited or temporarily unavailable, the app retries the same request with the second model. If both selectors use the same model, duplicate fallback is skipped.
+If the first model is rate-limited or temporarily unavailable, the app retries the same request with the second model. If both selectors use the same model, duplicate fallback is skipped. Each model slot also has an editable OpenRouter model ID field, so you can choose a preset or type a model ID directly, such as `google/gemma-4-31b-it:free`.
 
 Model choices:
 
 | Model | Best For |
 | --- | --- |
-| `google/gemma-4-31b-it:free` | Best default for slide understanding, multilingual summaries, and instruction-following |
-| `google/gemma-4-26b-a4b-it:free` | Balanced backup for Korean/English slide explanation with lower load than 31B |
-| `nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free` | Fast reasoning-oriented backup for quick slide study notes when throughput matters |
+| `nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free` | Default first model for fast reasoning-oriented slide study notes when throughput matters |
+| `google/gemma-4-26b-a4b-it:free` | Default fallback for Korean/English slide explanation with lower load than 31B |
+| `google/gemma-4-31b-it:free` | High-capacity option for slide understanding, multilingual summaries, and instruction-following |
 
 The app sends selected PNG slide images to OpenRouter only when you explicitly run a study or chat action.
 
@@ -231,7 +231,7 @@ OpenRouter study-note and chat features send selected slide PNGs and your prompt
 - The app extracts slide screenshots, not editable slide text.
 - PPTX output places each extracted slide image on a slide while preserving the extracted video frame aspect ratio; it does not reconstruct native PowerPoint shapes.
 - Videos with live handwriting, frequent cursor movement, animated slides, or speaker overlays may need a lower threshold or manual cleanup.
-- GPU/Metal comparison is not implemented in v2.2.4; the engine is structured so acceleration can be added later.
+- GPU/Metal comparison is not implemented in v2.2.5; the engine is structured so acceleration can be added later.
 
 ## Build From Source
 

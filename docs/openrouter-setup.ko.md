@@ -36,19 +36,19 @@ API key는 비밀번호처럼 관리해야 합니다. GitHub issue, 스크린샷
 기본 모델 순서는 아래와 같습니다.
 
 ```text
-First model: google/gemma-4-31b-it:free
+First model: nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free
 Second model: google/gemma-4-26b-a4b-it:free
 ```
 
-**API Settings** 탭에서 **First model**과 **Second model**을 모두 선택할 수 있습니다. 첫 번째 모델이 rate limit이나 일시적 provider 문제로 실패하면 앱이 같은 요청을 두 번째 모델로 다시 시도합니다. 두 선택값이 같으면 중복 fallback은 건너뜁니다.
+**API Settings** 탭에서 **First model**과 **Second model**을 모두 선택할 수 있습니다. 첫 번째 모델이 rate limit이나 일시적 provider 문제로 실패하면 앱이 같은 요청을 두 번째 모델로 다시 시도합니다. 두 선택값이 같으면 중복 fallback은 건너뜁니다. preset menu를 쓰거나 각 model ID 입력칸에 OpenRouter model ID를 직접 입력할 수 있습니다. 직접 입력한 모델이 잘못되었거나 계정에서 사용할 수 없으면 OpenRouter가 오류를 반환합니다.
 
 앱에서 선택할 수 있는 모델:
 
 | 모델 | 추천 상황 |
 | --- | --- |
-| `google/gemma-4-31b-it:free` | 슬라이드 이해, 다국어 요약, instruction following에 가장 적합한 기본값 |
-| `google/gemma-4-26b-a4b-it:free` | 31B보다 부담이 낮은 한국어/영어 슬라이드 설명용 균형형 fallback |
-| `nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free` | 처리량과 빠른 reasoning이 중요할 때 쓸 수 있는 빠른 fallback |
+| `nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free` | 처리량과 빠른 reasoning이 중요할 때 쓰는 기본 1순위 모델 |
+| `google/gemma-4-26b-a4b-it:free` | 31B보다 부담이 낮은 한국어/영어 슬라이드 설명용 기본 fallback |
+| `google/gemma-4-31b-it:free` | 슬라이드 이해, 다국어 요약, instruction following에 강한 고성능 후보 |
 
 무료 모델은 provider의 rate limit이나 일시적 availability 영향을 받을 수 있습니다. fallback 모델을 설정해두면 많은 일시적 실패를 사용자가 직접 재시도하지 않고 회복할 수 있습니다.
 

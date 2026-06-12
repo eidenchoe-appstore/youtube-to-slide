@@ -197,25 +197,21 @@ struct InspectorView: View {
     private var modelFallbackSection: some View {
         InspectorSection("Model Fallback") {
             VStack(alignment: .leading, spacing: 12) {
-                Picker("First model", selection: primaryModelBinding) {
-                    ForEach(OpenRouterStudyModel.allCases) { model in
-                        Text(model.displayName)
-                            .tag(model.id)
-                    }
-                }
-
-                modelDescription(for: store.settings.primaryStudyModelID)
+                modelSlot(
+                    title: "First model",
+                    modelBinding: primaryModelBinding,
+                    presetBinding: primaryPresetBinding,
+                    defaultModelID: OpenRouterStudyModel.defaultPrimaryID
+                )
 
                 Divider()
 
-                Picker("Second model", selection: fallbackModelBinding) {
-                    ForEach(OpenRouterStudyModel.allCases) { model in
-                        Text(model.displayName)
-                            .tag(model.id)
-                    }
-                }
-
-                modelDescription(for: store.settings.fallbackStudyModelID)
+                modelSlot(
+                    title: "Second model",
+                    modelBinding: fallbackModelBinding,
+                    presetBinding: fallbackPresetBinding,
+                    defaultModelID: OpenRouterStudyModel.defaultFallbackID
+                )
 
                 if store.settings.primaryStudyModelID == store.settings.fallbackStudyModelID {
                     Label("First and second models are the same, so fallback will be skipped.", systemImage: "exclamationmark.triangle")
@@ -227,6 +223,39 @@ struct InspectorView: View {
                         .foregroundStyle(.secondary)
                 }
             }
+        }
+    }
+
+    private func modelSlot(
+        title: String,
+        modelBinding: Binding<String>,
+        presetBinding: Binding<String>,
+        defaultModelID: String
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Picker(title, selection: presetBinding) {
+                ForEach(OpenRouterStudyModel.allCases) { model in
+                    Text(model.displayName)
+                        .tag(model.id)
+                }
+                Divider()
+                Text("Custom model ID")
+                    .tag("custom")
+            }
+
+            HStack {
+                TextField("OpenRouter model ID", text: modelBinding)
+                    .textFieldStyle(.roundedBorder)
+                    .font(.caption.monospaced())
+                    .textSelection(.enabled)
+
+                Button("Default") {
+                    modelBinding.wrappedValue = defaultModelID
+                }
+                .disabled(modelBinding.wrappedValue == defaultModelID)
+            }
+
+            modelDescription(for: modelBinding.wrappedValue)
         }
     }
 
@@ -316,6 +345,25 @@ struct InspectorView: View {
         }
     }
 
+    private var primaryPresetBinding: Binding<String> {
+        presetBinding(for: primaryModelBinding)
+    }
+
+    private var fallbackPresetBinding: Binding<String> {
+        presetBinding(for: fallbackModelBinding)
+    }
+
+    private func presetBinding(for modelBinding: Binding<String>) -> Binding<String> {
+        Binding {
+            OpenRouterStudyModel.isPreset(modelBinding.wrappedValue) ? modelBinding.wrappedValue : "custom"
+        } set: { modelID in
+            guard modelID != "custom" else {
+                return
+            }
+            modelBinding.wrappedValue = modelID
+        }
+    }
+
     private var notionParentPageURLBinding: Binding<String> {
         Binding {
             store.settings.notionParentPageURL
@@ -325,9 +373,9 @@ struct InspectorView: View {
     }
 
     private func modelDescription(for modelID: String) -> some View {
-        let model = OpenRouterStudyModel.model(for: modelID)
+        let model = OpenRouterStudyModel.modelDescription(for: modelID)
         return VStack(alignment: .leading, spacing: 4) {
-            Text(model.id)
+            Text(OpenRouterStudyModel.sanitizedModelID(modelID).isEmpty ? "No model ID set" : OpenRouterStudyModel.sanitizedModelID(modelID))
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .textSelection(.enabled)

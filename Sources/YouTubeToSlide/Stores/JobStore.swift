@@ -41,14 +41,13 @@ final class JobStore: ObservableObject {
         if let storedPath = UserDefaults.standard.string(forKey: "defaultOutputDirectory") {
             initialSettings.defaultOutputDirectory = URL(fileURLWithPath: storedPath)
         }
-        if let storedPrimaryModelID = UserDefaults.standard.string(forKey: "primaryStudyModelID"),
-           OpenRouterStudyModel.isAvailable(storedPrimaryModelID) {
-            initialSettings.primaryStudyModelID = storedPrimaryModelID
-        }
-        if let storedFallbackModelID = UserDefaults.standard.string(forKey: "fallbackStudyModelID"),
-           OpenRouterStudyModel.isAvailable(storedFallbackModelID) {
-            initialSettings.fallbackStudyModelID = storedFallbackModelID
-        }
+        let storedPrimaryModelID = UserDefaults.standard.string(forKey: "primaryStudyModelID")
+        let storedFallbackModelID = UserDefaults.standard.string(forKey: "fallbackStudyModelID")
+        let migratedModels = Self.migratedStudyModelIDs(primary: storedPrimaryModelID, fallback: storedFallbackModelID)
+        initialSettings.primaryStudyModelID = migratedModels.primary
+        initialSettings.fallbackStudyModelID = migratedModels.fallback
+        UserDefaults.standard.set(migratedModels.primary, forKey: "primaryStudyModelID")
+        UserDefaults.standard.set(migratedModels.fallback, forKey: "fallbackStudyModelID")
         if let storedNotionParentPageURL = UserDefaults.standard.string(forKey: "notionParentPageURL") {
             initialSettings.notionParentPageURL = storedNotionParentPageURL
         }
@@ -58,6 +57,31 @@ final class JobStore: ObservableObject {
         self.hasNotionAPIKey = KeychainService.loadNotionAPIKey() != nil
         self.notionConnectionName = UserDefaults.standard.string(forKey: "notionConnectionName")
         appendDevLog("App initialized.", level: .debug)
+    }
+
+    private static func migratedStudyModelIDs(primary: String?, fallback: String?) -> (primary: String, fallback: String) {
+        let oldDefaultPrimary = OpenRouterStudyModel.gemma31B.id
+        let oldDefaultFallback = OpenRouterStudyModel.gemma26BA4B.id
+        let removedModelIDs: Set<String> = [
+            "nvidia/nemotron-nano-12b-v2-vl:free",
+            "nvidia/llama-nemotron-rerank-vl-1b-v2:free"
+        ]
+
+        let trimmedPrimary = primary.map(OpenRouterStudyModel.sanitizedModelID) ?? ""
+        let trimmedFallback = fallback.map(OpenRouterStudyModel.sanitizedModelID) ?? ""
+
+        if trimmedPrimary == oldDefaultPrimary && trimmedFallback == oldDefaultFallback {
+            return (OpenRouterStudyModel.defaultPrimaryID, OpenRouterStudyModel.defaultFallbackID)
+        }
+
+        let usablePrimary = OpenRouterStudyModel.isUsableModelID(trimmedPrimary) && !removedModelIDs.contains(trimmedPrimary)
+            ? trimmedPrimary
+            : OpenRouterStudyModel.defaultPrimaryID
+        let usableFallback = OpenRouterStudyModel.isUsableModelID(trimmedFallback) && !removedModelIDs.contains(trimmedFallback)
+            ? trimmedFallback
+            : OpenRouterStudyModel.defaultFallbackID
+
+        return (usablePrimary, usableFallback)
     }
 
     var selectedJob: ExtractionJob? {
@@ -252,15 +276,17 @@ final class JobStore: ObservableObject {
     }
 
     func setPrimaryStudyModelID(_ modelID: String) {
-        settings.primaryStudyModelID = modelID
-        UserDefaults.standard.set(modelID, forKey: "primaryStudyModelID")
-        appendDevLog("Primary study model set: \(modelID).", level: .debug)
+        let trimmed = OpenRouterStudyModel.sanitizedModelID(modelID)
+        settings.primaryStudyModelID = trimmed
+        UserDefaults.standard.set(trimmed, forKey: "primaryStudyModelID")
+        appendDevLog("Primary study model set: \(trimmed).", level: .debug)
     }
 
     func setFallbackStudyModelID(_ modelID: String) {
-        settings.fallbackStudyModelID = modelID
-        UserDefaults.standard.set(modelID, forKey: "fallbackStudyModelID")
-        appendDevLog("Fallback study model set: \(modelID).", level: .debug)
+        let trimmed = OpenRouterStudyModel.sanitizedModelID(modelID)
+        settings.fallbackStudyModelID = trimmed
+        UserDefaults.standard.set(trimmed, forKey: "fallbackStudyModelID")
+        appendDevLog("Fallback study model set: \(trimmed).", level: .debug)
     }
 
     func setNotionParentPageURL(_ parentPageURL: String) {
