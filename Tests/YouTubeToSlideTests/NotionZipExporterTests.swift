@@ -23,7 +23,7 @@ final class NotionZipExporterTests: XCTestCase {
         job.studyNotes[1] = SlideStudyNote(
             slideIndex: 1,
             timestampSec: 2.5,
-            markdown: "## 핵심 요약\n- Important point",
+            markdown: "# Binary Classification Performance\n\n## 핵심 요약\n- Important point",
             modelID: OpenRouterStudyModel.nemotronNano.id,
             generatedAt: Date()
         )
@@ -35,8 +35,11 @@ final class NotionZipExporterTests: XCTestCase {
         XCTAssertTrue(listing.contains("Lecture.html"))
         XCTAssertTrue(listing.contains("assets/slide_000001_3s.png"))
         XCTAssertTrue(html.contains("<h1>Lecture</h1>"))
+        XCTAssertTrue(html.contains("<h2>Binary Classification Performance</h2>"))
+        XCTAssertTrue(html.contains("<div class=\"slide-meta\">Slide 1 · 3s</div>"))
         XCTAssertTrue(html.contains("<img class=\"slide-image\" src=\"assets/slide_000001_3s.png\""))
         XCTAssertTrue(html.contains("<h3>핵심 요약</h3>"))
         XCTAssertTrue(html.contains("<li>Important point</li>"))
+        XCTAssertFalse(html.contains("<h3>Binary Classification Performance</h3>"))
     }
 }

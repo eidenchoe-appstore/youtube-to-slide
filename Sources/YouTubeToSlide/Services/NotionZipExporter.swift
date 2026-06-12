@@ -65,14 +65,18 @@ struct NotionZipExporter {
             "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">",
             "<title>\(escapeHTML(job.title))</title>",
             "<style>",
-            "body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;line-height:1.55;margin:40px;max-width:1040px;color:#1f2328}",
-            "h1{font-size:34px;margin-bottom:8px}h2{font-size:24px;margin-top:36px;border-top:1px solid #d8dee4;padding-top:24px}",
-            ".meta{color:#57606a;margin-bottom:28px}.slide-image{max-width:100%;height:auto;border:1px solid #d8dee4;border-radius:8px}",
-            ".note{margin-top:16px}.empty{color:#57606a;font-style:italic}pre{background:#f6f8fa;padding:12px;border-radius:8px;overflow:auto}",
-            "code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}li{margin:4px 0}",
+            ":root{--text:#37352f;--muted:#787774;--line:rgba(55,53,47,.16);--bg:#fff;--soft:#f7f6f3}",
+            "body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;line-height:1.55;margin:0;background:var(--bg);color:var(--text)}",
+            ".page{max-width:900px;margin:0 auto;padding:64px 40px 96px}",
+            "h1{font-size:40px;line-height:1.2;font-weight:700;margin:0 0 12px;letter-spacing:0}h2{font-size:26px;line-height:1.3;font-weight:650;margin:44px 0 10px;padding-top:24px;border-top:1px solid var(--line);letter-spacing:0}",
+            "h3{font-size:19px;line-height:1.35;font-weight:650;margin:22px 0 8px;letter-spacing:0}p{margin:8px 0}.meta,.slide-meta{color:var(--muted);font-size:14px}",
+            ".meta{margin-bottom:34px}.slide-image{display:block;max-width:100%;height:auto;border-radius:3px;margin:14px 0 18px}",
+            ".note{margin-top:4px}.empty,.callout{background:var(--soft);border-radius:3px;padding:10px 12px;color:var(--muted)}",
+            "pre{background:var(--soft);padding:12px;border-radius:3px;overflow:auto}code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}ul{padding-left:1.5em;margin:6px 0 10px}li{margin:4px 0}",
             "</style>",
             "</head>",
             "<body>",
+            "<main class=\"page\">",
             "<h1>\(escapeHTML(job.title))</h1>",
             "<div class=\"meta\">",
             "<div>Source: \(escapeHTML(job.source))</div>",
@@ -89,21 +93,53 @@ struct NotionZipExporter {
             }
             try FileManager.default.copyItem(at: slide.fileURL, to: assetURL)
 
-            body.append("<h2>Slide \(slide.index) · \(escapeHTML(AppFormatters.timestamp(slide.timestampSec)))</h2>")
+            let note = studyNoteTitleAndBody(job.studyNotes[slide.index]?.markdown)
+            let slideTitle = note.title ?? "Slide \(slide.index)"
+            body.append("<h2>\(escapeHTML(slideTitle))</h2>")
+            body.append("<div class=\"slide-meta\">Slide \(slide.index) · \(escapeHTML(AppFormatters.timestamp(slide.timestampSec)))</div>")
             body.append("<img class=\"slide-image\" src=\"assets/\(escapeAttribute(assetName))\" alt=\"Slide \(slide.index)\">")
             body.append("<div class=\"note\">")
-            if let note = job.studyNotes[slide.index],
-               !note.markdown.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                body.append(markdownToHTML(note.markdown))
+            if !note.body.isEmpty {
+                body.append(markdownToHTML(note.body))
             } else {
                 body.append("<p class=\"empty\">No study note generated for this slide yet.</p>")
             }
             body.append("</div>")
         }
 
+        body.append("</main>")
         body.append("</body>")
         body.append("</html>")
         return body.joined(separator: "\n")
+    }
+
+    private func studyNoteTitleAndBody(_ markdown: String?) -> (title: String?, body: String) {
+        guard let markdown else {
+            return (nil, "")
+        }
+
+        var lines = markdown
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .components(separatedBy: .newlines)
+
+        while let first = lines.first,
+              first.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            lines.removeFirst()
+        }
+
+        guard let firstLine = lines.first?.trimmingCharacters(in: .whitespacesAndNewlines) else {
+            return (nil, "")
+        }
+
+        let headingPrefixes = ["# ", "## ", "### "]
+        if let prefix = headingPrefixes.first(where: { firstLine.hasPrefix($0) }) {
+            lines.removeFirst()
+            let title = String(firstLine.dropFirst(prefix.count))
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            return (title.isEmpty ? nil : title, lines.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines))
+        }
+
+        return (nil, lines.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines))
     }
 
     private func markdownToHTML(_ markdown: String) -> String {

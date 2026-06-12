@@ -1,0 +1,111 @@
+# OpenRouter Setup for YouTube to Slide
+
+YouTube to Slide can generate slide-by-slide study notes and chat answers with OpenRouter vision-language models. The slide extraction pipeline does not require OpenRouter. OpenRouter is only needed when you click **Study Selected**, **Study All Slides**, or chat actions.
+
+Official OpenRouter docs:
+
+- [OpenRouter Quickstart](https://openrouter.ai/docs/quickstart)
+- [OpenRouter API Authentication](https://openrouter.ai/docs/api/reference/authentication)
+
+## 1. Create an OpenRouter API Key
+
+1. Go to [OpenRouter](https://openrouter.ai/).
+2. Sign up or log in.
+3. Open the API Keys page from your OpenRouter account.
+4. Create a new API key.
+5. Optionally set a credit limit for safety.
+6. Copy the key. OpenRouter API keys usually start with `sk-or-`.
+
+Keep the key private. Do not paste it into GitHub issues, screenshots, shared notes, or public documents.
+
+## 2. Connect the Key in the App
+
+1. Open **YouTube to Slide**.
+2. Add and process a video or YouTube URL.
+3. Open the right inspector.
+4. Find **AI Study Notes**.
+5. Paste your OpenRouter API key into **OpenRouter API key**.
+6. Click **Save Key**.
+
+The app stores the key in macOS Keychain. It does not write the key to the project folder or exported slide folders.
+
+## 3. Choose a Model
+
+The default model is:
+
+```text
+nvidia/nemotron-nano-12b-v2-vl:free
+```
+
+Available model choices:
+
+| Model | Use Case |
+| --- | --- |
+| `nvidia/nemotron-nano-12b-v2-vl:free` | Default. Strong for OCR, documents, charts, and slide-level visual understanding |
+| `google/gemma-4-31b-it:free` | Stronger broad image understanding, multilingual explanations, and long-context synthesis |
+| `nvidia/llama-nemotron-rerank-vl-1b-v2:free` | Lightweight option when speed matters more than depth |
+
+Free models can have provider-side rate limits or temporary availability issues. If a request fails, try again later or choose another model.
+
+## 4. Generate Study Notes
+
+1. Select a processed job.
+2. Select a slide in **PNG Slides**.
+3. Click **Study Selected** for one slide, or **Study All Slides** for the whole deck.
+
+The VLM is prompted to infer a slide title and create a study-note structure:
+
+```markdown
+# Inferred slide title
+
+## 핵심 요약
+- Main points
+
+## 슬라이드 내용 해설
+- Student-friendly explanation
+
+## 이미지/텍스트에서 읽힌 주요 정보
+- OCR-like key terms, equations, chart labels, or diagram elements
+
+## 공부할 때 주의할 점
+- Common misunderstanding or practical interpretation
+
+## 복습 질문
+- Review questions
+```
+
+## 5. Export a Notion Page ZIP
+
+Click **Note to Notion Page** after generating notes.
+
+The app creates:
+
+```text
+LectureTitle.notion-page.zip
+  LectureTitle.html
+  assets/
+    slide_000001_3s.png
+    slide_000002_37s.png
+```
+
+The HTML uses a Notion-like heading hierarchy:
+
+```text
+Lecture title
+  Slide title inferred by the VLM
+    핵심 요약
+    슬라이드 내용 해설
+    이미지/텍스트에서 읽힌 주요 정보
+    공부할 때 주의할 점
+    복습 질문
+```
+
+Import the ZIP into Notion so the HTML and referenced images are handled together.
+
+## Privacy Notes
+
+- Local video processing stays on your Mac.
+- YouTube videos are downloaded locally with `yt-dlp` before slide extraction.
+- OpenRouter is only contacted when you run AI study-note or chat features.
+- The app sends selected slide PNG images and your prompt to OpenRouter for those AI actions.
+- The API key is stored in macOS Keychain.

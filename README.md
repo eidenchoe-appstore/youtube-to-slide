@@ -57,6 +57,8 @@ PATH
 
 AI study notes require your own OpenRouter API key. The key is stored in macOS Keychain and is only used when you click study-note or chat buttons.
 
+For setup steps, see [OpenRouter Setup for YouTube to Slide](docs/openrouter-setup.md). Official references: [OpenRouter Quickstart](https://openrouter.ai/docs/quickstart) and [API Authentication](https://openrouter.ai/docs/api/reference/authentication).
+
 ## AI Study Notes
 
 After extracting slides, save an OpenRouter API key in the inspector:
@@ -68,6 +70,18 @@ After extracting slides, save an OpenRouter API key in the inspector:
 5. Click **Note to Notion Page** to create a ZIP with an HTML page and slide image assets.
 
 The ZIP is intended for Notion import: it contains `Title.html` and an `assets/` folder with the referenced PNG slides.
+
+Each generated study note is prompted to start with an inferred slide title and then use section headings:
+
+```markdown
+# Inferred slide title
+
+## 핵심 요약
+## 슬라이드 내용 해설
+## 이미지/텍스트에서 읽힌 주요 정보
+## 공부할 때 주의할 점
+## 복습 질문
+```
 
 Default model:
 
@@ -164,7 +178,7 @@ VideoTitle/
 | PDF | Best for reading, printing, and sharing |
 | PPTX | Best for opening the result as a PowerPoint deck; slide size keeps the extracted video frame aspect ratio |
 | Timeline JSON | Best for auditing timestamps and change ratios |
-| Note to Notion Page ZIP | Best for importing study notes and slide images together into Notion; contains HTML plus an `assets/` folder |
+| Note to Notion Page ZIP | Best for importing study notes and slide images together into Notion; contains Notion-style HTML plus an `assets/` folder |
 
 ## Tuning
 
@@ -195,7 +209,7 @@ OpenRouter study-note and chat features send selected slide PNGs and your prompt
 - The app extracts slide screenshots, not editable slide text.
 - PPTX output places each extracted slide image on a slide while preserving the extracted video frame aspect ratio; it does not reconstruct native PowerPoint shapes.
 - Videos with live handwriting, frequent cursor movement, animated slides, or speaker overlays may need a lower threshold or manual cleanup.
-- GPU/Metal comparison is not implemented in v1.2.0; the engine is structured so acceleration can be added later.
+- GPU/Metal comparison is not implemented in v1.2.1; the engine is structured so acceleration can be added later.
 
 ## Build From Source
 
