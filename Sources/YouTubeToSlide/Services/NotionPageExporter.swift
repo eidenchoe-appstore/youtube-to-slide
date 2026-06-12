@@ -31,6 +31,79 @@ struct NotionExportResult {
     var pageURL: URL
 }
 
+struct NotionConnectionIdentity: Decodable, Equatable {
+    var name: String?
+    var type: String
+    var bot: Bot?
+
+    var displayName: String {
+        let baseName = nonEmpty(name) ?? "Unnamed Notion connection"
+        guard let workspaceName = nonEmpty(bot?.workspaceName),
+              workspaceName != baseName else {
+            return baseName
+        }
+        return "\(baseName) · \(workspaceName)"
+    }
+
+    private static func nonEmpty(_ value: String?) -> String? {
+        guard let trimmed = value?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !trimmed.isEmpty else {
+            return nil
+        }
+        return trimmed
+    }
+
+    private func nonEmpty(_ value: String?) -> String? {
+        Self.nonEmpty(value)
+    }
+
+    struct Bot: Decodable, Equatable {
+        var workspaceName: String?
+
+        enum CodingKeys: String, CodingKey {
+            case workspaceName = "workspace_name"
+        }
+    }
+}
+
+struct NotionIdentityClient {
+    private let apiKey: String
+    private let apiVersion = "2026-03-11"
+
+    init(apiKey: String) {
+        self.apiKey = apiKey
+    }
+
+    func retrieve() async throws -> NotionConnectionIdentity {
+        var request = URLRequest(url: URL(string: "https://api.notion.com/v1/users/me")!)
+        request.httpMethod = "GET"
+        request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        request.setValue(apiVersion, forHTTPHeaderField: "Notion-Version")
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw NotionExportError.unexpectedResponse("Missing HTTP response.")
+        }
+
+        guard (200..<300).contains(httpResponse.statusCode) else {
+            throw NotionExportError.requestFailed(httpResponse.statusCode, notionErrorMessage(from: data))
+        }
+
+        do {
+            return try JSONDecoder().decode(NotionConnectionIdentity.self, from: data)
+        } catch {
+            throw NotionExportError.unexpectedResponse(error.localizedDescription)
+        }
+    }
+
+    private func notionErrorMessage(from data: Data) -> String {
+        if let error = try? JSONDecoder().decode(NotionErrorResponse.self, from: data) {
+            return [error.code, error.message].compactMap { $0 }.joined(separator: ": ")
+        }
+        return String(data: data, encoding: .utf8) ?? "No response body"
+    }
+}
+
 struct NotionParentPageIDParser {
     static func parse(_ input: String) -> String? {
         let trimmed = input.trimmingCharacters(in: .whitespacesAndNewlines)

@@ -231,7 +231,7 @@ OpenRouter study-note and chat features send selected slide PNGs and your prompt
 - The app extracts slide screenshots, not editable slide text.
 - PPTX output places each extracted slide image on a slide while preserving the extracted video frame aspect ratio; it does not reconstruct native PowerPoint shapes.
 - Videos with live handwriting, frequent cursor movement, animated slides, or speaker overlays may need a lower threshold or manual cleanup.
-- GPU/Metal comparison is not implemented in v2.2.1; the engine is structured so acceleration can be added later.
+- GPU/Metal comparison is not implemented in v2.2.2; the engine is structured so acceleration can be added later.
 
 ## Build From Source
 

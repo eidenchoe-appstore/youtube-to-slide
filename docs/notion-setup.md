@@ -6,6 +6,7 @@ Official Notion docs:
 
 - [Create a page](https://developers.notion.com/reference/post-page)
 - [Append block children](https://developers.notion.com/reference/patch-block-children)
+- [Retrieve your token's bot user](https://developers.notion.com/reference/get-self)
 - [Working with files and media](https://developers.notion.com/guides/data-apis/working-with-files-and-media)
 - [Uploading small files](https://developers.notion.com/guides/data-apis/uploading-small-files)
 
@@ -37,7 +38,8 @@ If this step is skipped, Notion may return `403` or `404` even when the token is
 3. Open **API Settings**.
 4. Paste the token into **Notion API token**.
 5. Click **Save Token**.
-6. Paste the parent page URL into **Parent page URL or page ID**.
+6. Confirm that the integration name shown under the token field is the integration you expect.
+7. Paste the parent page URL into **Parent page URL or page ID**.
 
 The token is stored in macOS Keychain. The parent page URL is stored in app preferences.
 
@@ -58,6 +60,27 @@ show Open in Notion when finished
 ```
 
 For local videos, the Notion page title uses the video filename without the extension. For YouTube jobs, the page title uses the resolved YouTube title.
+
+## Troubleshooting
+
+### `object_not_found` mentions the wrong integration name
+
+If Notion returns an error like this:
+
+```text
+Could not find page with ID: ...
+Make sure the relevant pages and databases are shared with your integration "opencraw_api".
+```
+
+the quoted name is the Notion integration attached to the saved token. It is not selected by the app code. If the name is not the integration you expect:
+
+1. Open **API Settings**.
+2. Click **Clear** in the **Notion API** section.
+3. Paste the token from the correct Notion integration.
+4. Click **Save Token** and confirm the integration name shown in the app.
+5. Share the parent page with that same integration from Notion's **Add connections** menu.
+
+Notion can return `404 object_not_found` even when the page exists if the saved token belongs to an integration that has not been granted access to the parent page.
 
 ## Limits
 

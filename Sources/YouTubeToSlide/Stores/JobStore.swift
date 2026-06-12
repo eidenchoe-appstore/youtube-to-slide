@@ -16,6 +16,8 @@ final class JobStore: ObservableObject {
     @Published var hasNotionAPIKey: Bool
     @Published var openRouterAPIKeyInput = ""
     @Published var notionAPIKeyInput = ""
+    @Published var notionConnectionName: String?
+    @Published var isValidatingNotionAPIKey = false
     @Published var selectedSlideIndex: Int?
     @Published var message: String?
 
@@ -45,6 +47,7 @@ final class JobStore: ObservableObject {
         self.toolStatus = ToolResolver.resolve()
         self.hasOpenRouterAPIKey = KeychainService.loadOpenRouterAPIKey() != nil
         self.hasNotionAPIKey = KeychainService.loadNotionAPIKey() != nil
+        self.notionConnectionName = UserDefaults.standard.string(forKey: "notionConnectionName")
     }
 
     var selectedJob: ExtractionJob? {
@@ -165,13 +168,23 @@ final class JobStore: ObservableObject {
             return
         }
 
-        do {
-            try KeychainService.saveNotionAPIKey(trimmed)
-            hasNotionAPIKey = true
-            notionAPIKeyInput = ""
-            message = "Notion API token saved to Keychain."
-        } catch {
-            message = error.localizedDescription
+        isValidatingNotionAPIKey = true
+        message = "Checking Notion token..."
+
+        Task {
+            do {
+                let identity = try await NotionIdentityClient(apiKey: trimmed).retrieve()
+                try KeychainService.saveNotionAPIKey(trimmed)
+                hasNotionAPIKey = true
+                notionAPIKeyInput = ""
+                notionConnectionName = identity.displayName
+                UserDefaults.standard.set(identity.displayName, forKey: "notionConnectionName")
+                message = "Notion API token saved for \(identity.displayName)."
+            } catch {
+                hasNotionAPIKey = KeychainService.loadNotionAPIKey() != nil
+                message = "Notion token check failed: \(error.localizedDescription)"
+            }
+            isValidatingNotionAPIKey = false
         }
     }
 
@@ -180,6 +193,8 @@ final class JobStore: ObservableObject {
             try KeychainService.deleteNotionAPIKey()
             hasNotionAPIKey = false
             notionAPIKeyInput = ""
+            notionConnectionName = nil
+            UserDefaults.standard.removeObject(forKey: "notionConnectionName")
             message = "Notion API token removed."
         } catch {
             message = error.localizedDescription

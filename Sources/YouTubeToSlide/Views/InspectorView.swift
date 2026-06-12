@@ -139,6 +139,16 @@ struct InspectorView: View {
                         .font(.callout)
                 }
 
+                if let connectionName = store.notionConnectionName {
+                    Label("Using integration: \(connectionName)", systemImage: "person.crop.circle.badge.checkmark")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .textSelection(.enabled)
+                    Text("If this is not the integration you expect, clear the token and save the correct Notion integration token.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
                 SecureField("Notion API token", text: $store.notionAPIKeyInput)
                     .textFieldStyle(.roundedBorder)
 
@@ -147,12 +157,17 @@ struct InspectorView: View {
                         store.saveNotionAPIKey()
                     }
                     .buttonStyle(.borderedProminent)
-                    .disabled(store.notionAPIKeyInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    .disabled(store.notionAPIKeyInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || store.isValidatingNotionAPIKey)
 
                     Button("Clear") {
                         store.clearNotionAPIKey()
                     }
-                    .disabled(!store.hasNotionAPIKey)
+                    .disabled(!store.hasNotionAPIKey || store.isValidatingNotionAPIKey)
+                }
+
+                if store.isValidatingNotionAPIKey {
+                    ProgressView("Checking Notion token...")
+                        .font(.caption)
                 }
 
                 Divider()
