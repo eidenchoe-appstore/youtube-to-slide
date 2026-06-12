@@ -46,7 +46,6 @@ struct InspectorView: View {
                 Toggle("PNG folder", isOn: $store.settings.exportPNG)
                 Toggle("PDF", isOn: $store.settings.exportPDF)
                 Toggle("PPTX", isOn: $store.settings.exportPPTX)
-                Toggle("Markdown study notes", isOn: $store.settings.exportMarkdown)
 
                 Picker("Resolution", selection: $store.settings.resolution) {
                     ForEach(ResolutionPreset.allCases) { preset in

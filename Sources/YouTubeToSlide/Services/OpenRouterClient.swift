@@ -29,7 +29,7 @@ struct OpenRouterClient {
         You are a lecture study-note assistant. Analyze the attached lecture slide image.
 
         Write in Korean by default, while preserving important English technical terms.
-        Return Notion-friendly Markdown only.
+        Return concise structured study-note text with headings and bullet lists.
 
         Use this structure:
         ## 핵심 요약

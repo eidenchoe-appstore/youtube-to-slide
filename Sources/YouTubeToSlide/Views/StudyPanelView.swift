@@ -29,13 +29,22 @@ struct StudyPanelView: View {
                 .disabled(!store.hasOpenRouterAPIKey || store.isGeneratingStudyNotes || job.slides.isEmpty)
 
                 Button {
-                    store.exportStudyMarkdownForSelectedJob()
+                    store.exportNoteToNotionPageForSelectedJob()
                 } label: {
-                    Label("Export Markdown", systemImage: "square.and.arrow.down")
+                    Label("Note to Notion Page", systemImage: "square.and.arrow.down.on.square")
                 }
-                .disabled(job.studyNotes.isEmpty)
+                .disabled(job.slides.isEmpty)
 
                 Spacer()
+            }
+
+            if !store.hasOpenRouterAPIKey {
+                Label("Save an OpenRouter API key in the inspector to enable study notes and chat.", systemImage: "lock.fill")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .padding(10)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color.secondary.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
             }
 
             if store.isGeneratingStudyNotes {
@@ -59,9 +68,9 @@ struct StudyPanelView: View {
     private var header: some View {
         HStack {
             VStack(alignment: .leading, spacing: 3) {
-                Text("Study Notes")
+                Text("Chat & Study")
                     .font(.headline)
-                Text("Use a vision model through OpenRouter to explain selected slides or the full deck.")
+                Text("Use OpenRouter vision models to explain selected slides or the full deck.")
                     .font(.callout)
                     .foregroundStyle(.secondary)
             }
@@ -121,10 +130,18 @@ struct StudyPanelView: View {
                 }
                 .pickerStyle(.segmented)
                 .frame(width: 260)
+                .disabled(!store.hasOpenRouterAPIKey)
             }
 
-            if job.chatMessages.isEmpty {
-                Text("Ask about the selected slide or the whole lecture after saving an OpenRouter API key.")
+            if !store.hasOpenRouterAPIKey {
+                Text("Chat is disabled until an OpenRouter API key is saved.")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(10)
+                    .background(.background, in: RoundedRectangle(cornerRadius: 8))
+            } else if job.chatMessages.isEmpty {
+                Text("Ask about the selected slide or the whole lecture.")
                     .font(.callout)
                     .foregroundStyle(.secondary)
             } else {
@@ -144,6 +161,7 @@ struct StudyPanelView: View {
                     .textFieldStyle(.roundedBorder)
                     .lineLimit(1...3)
                     .onSubmit(sendChat)
+                    .disabled(!store.hasOpenRouterAPIKey)
 
                 Button {
                     sendChat()

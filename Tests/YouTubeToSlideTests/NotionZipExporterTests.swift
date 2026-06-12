@@ -1,10 +1,10 @@
 import XCTest
 @testable import YouTubeToSlide
 
-final class StudyMarkdownExporterTests: XCTestCase {
-    func testMarkdownExporterUsesRelativeSlideImageLinks() throws {
+final class NotionZipExporterTests: XCTestCase {
+    func testNotionZipExporterPackagesHTMLAndSlideAssets() throws {
         let root = FileManager.default.temporaryDirectory
-            .appendingPathComponent("YouTubeToSlideMarkdownTests-\(UUID().uuidString)", isDirectory: true)
+            .appendingPathComponent("YouTubeToSlideNotionZipTests-\(UUID().uuidString)", isDirectory: true)
         defer { try? FileManager.default.removeItem(at: root) }
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
 
@@ -28,10 +28,15 @@ final class StudyMarkdownExporterTests: XCTestCase {
             generatedAt: Date()
         )
 
-        let outputURL = try StudyMarkdownExporter().export(job: job)
-        let markdown = try String(contentsOf: outputURL, encoding: .utf8)
+        let outputURL = try NotionZipExporter().export(job: job)
+        let listing = try ShellService.run("/usr/bin/unzip", ["-l", outputURL.path]).stdout
+        let html = try ShellService.run("/usr/bin/unzip", ["-p", outputURL.path, "Lecture.html"]).stdout
 
-        XCTAssertTrue(markdown.contains("![Slide 1](./Lecture_000001_3s.png)"))
-        XCTAssertTrue(markdown.contains("## 핵심 요약"))
+        XCTAssertTrue(listing.contains("Lecture.html"))
+        XCTAssertTrue(listing.contains("assets/slide_000001_3s.png"))
+        XCTAssertTrue(html.contains("<h1>Lecture</h1>"))
+        XCTAssertTrue(html.contains("<img class=\"slide-image\" src=\"assets/slide_000001_3s.png\""))
+        XCTAssertTrue(html.contains("<h3>핵심 요약</h3>"))
+        XCTAssertTrue(html.contains("<li>Important point</li>"))
     }
 }

@@ -344,18 +344,18 @@ final class JobStore: ObservableObject {
         }
     }
 
-    func exportStudyMarkdownForSelectedJob() {
+    func exportNoteToNotionPageForSelectedJob() {
         guard let job = selectedJob else {
             message = "Select a job first."
             return
         }
 
         do {
-            let outputURL = try StudyMarkdownExporter().export(job: job)
+            let outputURL = try NotionZipExporter().export(job: job)
             updateJob(job.id) { job in
-                job.studyMarkdownURL = outputURL
+                job.notionZipURL = outputURL
             }
-            message = "Markdown study notes exported: \(outputURL.lastPathComponent)"
+            message = "Note to Notion Page ZIP created: \(outputURL.lastPathComponent)"
         } catch {
             message = error.localizedDescription
         }
@@ -438,15 +438,6 @@ final class JobStore: ObservableObject {
                 }
 
                 self.studyProgress = Double(offset + 1) / Double(slides.count)
-            }
-
-            if self.settings.exportMarkdown,
-               let refreshedJob = self.jobs.first(where: { $0.id == jobID }),
-               !refreshedJob.studyNotes.isEmpty,
-               let outputURL = try? StudyMarkdownExporter().export(job: refreshedJob) {
-                self.updateJob(jobID) { job in
-                    job.studyMarkdownURL = outputURL
-                }
             }
 
             self.isGeneratingStudyNotes = false

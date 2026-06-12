@@ -10,7 +10,6 @@ struct AppSettings: Equatable {
     var exportPNG: Bool = true
     var exportPDF: Bool = false
     var exportPPTX: Bool = false
-    var exportMarkdown: Bool = false
     var studyModelID: String = OpenRouterStudyModel.nemotronNano.id
     var defaultOutputDirectory: URL?
 

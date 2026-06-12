@@ -5,11 +5,11 @@
 
 [한국어 README](README.ko.md) | English
 
-Turn lecture videos into slide images, PDFs, and PowerPoint decks on macOS.
+Turn lecture videos into slide images, PDFs, PowerPoint decks, and Notion-ready study pages on macOS.
 
 YouTube to Slide is a local macOS app for extracting mostly static lecture slides from YouTube links and video files. Drop in a lecture recording, tune the sampling and change threshold, then export the detected slides as PNG files, a PDF, or a PPTX deck. If you provide an OpenRouter API key, the app can also turn extracted slide PNGs into study notes and chat context with a vision-language model.
 
-> The app is designed for screen-share lecture videos. It does not use AI, OCR, CLIP embeddings, or cloud processing.
+> Slide extraction is designed for screen-share lecture videos and uses local frame comparison, not AI, OCR, CLIP embeddings, or cloud processing.
 
 ## Features
 
@@ -21,7 +21,7 @@ YouTube to Slide is a local macOS app for extracting mostly static lecture slide
 - Export PNG slide folders by default, with optional PDF, PPTX, and timeline JSON
 - Generate slide-by-slide study notes with OpenRouter vision models
 - Chat about a selected slide or the whole lecture
-- Export Notion-friendly Markdown with relative PNG image links
+- Create a **Note to Notion Page** ZIP containing HTML plus slide PNG assets
 - Keep output next to the source video by default
 - Choose per-job and global output folders
 - Tune sampling interval, pixel delta, threshold, comparison width, and output resolution
@@ -33,7 +33,7 @@ Try the app with this short YouTube lecture video:
 
 https://www.youtube.com/watch?v=MxGW2WurKuM&list=PLRJhV4hUhIymmp5CCeIFPyxbknsdcXCc8&index=2
 
-Paste the URL into the YouTube field, wait for the preview card, click **Add**, then click **Start**.
+Paste the URL into the YouTube field, wait for the preview card, click **Add**, then click **Start Processing**.
 
 ## Requirements
 
@@ -59,13 +59,15 @@ AI study notes require your own OpenRouter API key. The key is stored in macOS K
 
 ## AI Study Notes
 
-After extracting slides, open **AI Study Notes** in the inspector:
+After extracting slides, save an OpenRouter API key in the inspector:
 
 1. Paste your OpenRouter API key.
 2. Click **Save Key**.
 3. Choose a model.
 4. Click **Study Selected**, **Study All Slides**, or ask a question in the chat box.
-5. Click **Export Markdown** to create a Notion-friendly study note file.
+5. Click **Note to Notion Page** to create a ZIP with an HTML page and slide image assets.
+
+The ZIP is intended for Notion import: it contains `Title.html` and an `assets/` folder with the referenced PNG slides.
 
 Default model:
 
@@ -151,7 +153,7 @@ VideoTitle/
   VideoTitle.pdf
   VideoTitle.pptx
   VideoTitle.timeline.json
-  VideoTitle.study-notes.md
+  VideoTitle.notion-page.zip
 ```
 
 ## Output Formats
@@ -162,7 +164,7 @@ VideoTitle/
 | PDF | Best for reading, printing, and sharing |
 | PPTX | Best for opening the result as a PowerPoint deck; slide size keeps the extracted video frame aspect ratio |
 | Timeline JSON | Best for auditing timestamps and change ratios |
-| Markdown notes | Best for Notion import; includes `![Slide](./slide.png)` relative links |
+| Note to Notion Page ZIP | Best for importing study notes and slide images together into Notion; contains HTML plus an `assets/` folder |
 
 ## Tuning
 
@@ -180,7 +182,7 @@ Recommended starting points:
 
 ## Privacy
 
-Processing is local. Local videos stay on your Mac. YouTube links are downloaded locally with `yt-dlp` before processing. The app does not send video frames, slide images, or output files to an AI service.
+Slide extraction is local. Local videos stay on your Mac. YouTube links are downloaded locally with `yt-dlp` before processing. The extraction pipeline does not send video frames, slide images, or output files to an AI service.
 
 The YouTube preview card uses YouTube's public preview metadata and thumbnail URL for the pasted link.
 
@@ -193,7 +195,7 @@ OpenRouter study-note and chat features send selected slide PNGs and your prompt
 - The app extracts slide screenshots, not editable slide text.
 - PPTX output places each extracted slide image on a slide while preserving the extracted video frame aspect ratio; it does not reconstruct native PowerPoint shapes.
 - Videos with live handwriting, frequent cursor movement, animated slides, or speaker overlays may need a lower threshold or manual cleanup.
-- GPU/Metal comparison is not implemented in v1.1.0; the engine is structured so acceleration can be added later.
+- GPU/Metal comparison is not implemented in v1.2.0; the engine is structured so acceleration can be added later.
 
 ## Build From Source
 
