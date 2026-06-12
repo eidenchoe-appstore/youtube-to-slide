@@ -231,7 +231,7 @@ struct NotionMarkdownRenderer {
                 "type": "emoji",
                 "emoji": attributes["icon"] ?? "💡"
             ],
-            "color": normalizedColor(attributes["color"] ?? "blue_bg")
+            "color": normalizedColor(attributes["color"] ?? "blue_background")
         ]
 
         let children = blocks(from: childMarkdown)
@@ -572,7 +572,8 @@ struct NotionMarkdownRenderer {
 
     private func normalizedColor(_ color: String) -> String {
         let normalized = color.trimmingCharacters(in: .whitespacesAndNewlines)
-        return validColors.contains(normalized) ? normalized : "default"
+        let apiColor = enhancedMarkdownColorAliases[normalized] ?? normalized
+        return validColors.contains(apiColor) ? apiColor : "default"
     }
 
     private func normalizedCodeLanguage(_ language: String) -> String {
@@ -607,7 +608,24 @@ struct NotionMarkdownRenderer {
         [
             "default",
             "gray", "brown", "orange", "yellow", "green", "blue", "purple", "pink", "red",
-            "gray_bg", "brown_bg", "orange_bg", "yellow_bg", "green_bg", "blue_bg", "purple_bg", "pink_bg", "red_bg"
+            "default_background",
+            "gray_background", "brown_background", "orange_background", "yellow_background", "green_background",
+            "blue_background", "purple_background", "pink_background", "red_background"
+        ]
+    }
+
+    private var enhancedMarkdownColorAliases: [String: String] {
+        [
+            "default_bg": "default_background",
+            "gray_bg": "gray_background",
+            "brown_bg": "brown_background",
+            "orange_bg": "orange_background",
+            "yellow_bg": "yellow_background",
+            "green_bg": "green_background",
+            "blue_bg": "blue_background",
+            "purple_bg": "purple_background",
+            "pink_bg": "pink_background",
+            "red_bg": "red_background"
         ]
     }
 

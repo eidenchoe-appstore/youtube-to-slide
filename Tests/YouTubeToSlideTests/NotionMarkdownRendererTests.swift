@@ -28,7 +28,7 @@ final class NotionMarkdownRendererTests: XCTestCase {
 
         XCTAssertEqual(blocks.count, 1)
         let callout = try XCTUnwrap(blocks[0]["callout"] as? [String: Any])
-        XCTAssertEqual(callout["color"] as? String, "yellow_bg")
+        XCTAssertEqual(callout["color"] as? String, "yellow_background")
         let icon = try XCTUnwrap(callout["icon"] as? [String: Any])
         XCTAssertEqual(icon["emoji"] as? String, "⚠️")
 
@@ -38,6 +38,25 @@ final class NotionMarkdownRendererTests: XCTestCase {
 
         let children = try XCTUnwrap(callout["children"] as? [[String: Any]])
         XCTAssertEqual(children.first?["type"] as? String, "bulleted_list_item")
+    }
+
+    func testEnhancedMarkdownBackgroundColorsAreMappedToNotionAPIColors() throws {
+        let blocks = NotionMarkdownRenderer().blocks(
+            from: """
+            # Warning {color="yellow_bg"}
+            <callout icon="⚠️" color="red_bg">Critical</callout>
+            - <span color="blue_bg">background text</span>
+            """
+        )
+
+        let heading = try XCTUnwrap(blocks[0]["heading_1"] as? [String: Any])
+        XCTAssertEqual(heading["color"] as? String, "yellow_background")
+
+        let callout = try XCTUnwrap(blocks[1]["callout"] as? [String: Any])
+        XCTAssertEqual(callout["color"] as? String, "red_background")
+
+        let bullet = try richTextPayload(in: blocks[2], key: "bulleted_list_item")
+        XCTAssertTrue(containsText("background text", in: bullet, color: "blue_background"))
     }
 
     func testMarkdownTableIsConvertedToNotionTableBlock() throws {

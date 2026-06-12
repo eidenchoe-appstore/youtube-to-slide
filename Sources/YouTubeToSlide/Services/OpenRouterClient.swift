@@ -60,7 +60,7 @@ struct OpenRouterClient {
         - Use $...$ for inline math such as $2^n$ or $34 \\bmod 32 = 2$ when math notation helps.
         - Use fenced code blocks only for real code or aligned binary arithmetic.
         - Use > quote blocks for important quoted statements.
-        - Use <callout icon="⚠️" color="yellow_bg"> for common mistakes or exam warnings when useful.
+        - Use <callout icon="⚠️" color="yellow_background"> for common mistakes or exam warnings when useful.
         - Use <span color="red">text</span> sparingly for genuinely critical warnings.
         - Use simple Markdown tables only when the slide contains a clear comparison table.
         - Do not include image markdown; the app uploads slide images separately.
