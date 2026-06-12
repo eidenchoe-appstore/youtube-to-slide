@@ -128,7 +128,7 @@ VideoTitle/
 | --- | --- |
 | PNG folder | Best for reviewing and reusing slide screenshots |
 | PDF | Best for reading, printing, and sharing |
-| PPTX | Best for opening the result as a PowerPoint deck |
+| PPTX | Best for opening the result as a PowerPoint deck; slide size keeps the extracted video frame aspect ratio |
 | Timeline JSON | Best for auditing timestamps and change ratios |
 
 ## Tuning
@@ -155,9 +155,9 @@ The YouTube preview card uses YouTube's public preview metadata and thumbnail UR
 
 - YouTube support depends on `yt-dlp` and the availability of the public video URL.
 - The app extracts slide screenshots, not editable slide text.
-- PPTX output places each extracted slide image on a slide; it does not reconstruct native PowerPoint shapes.
+- PPTX output places each extracted slide image on a slide while preserving the extracted video frame aspect ratio; it does not reconstruct native PowerPoint shapes.
 - Videos with live handwriting, frequent cursor movement, animated slides, or speaker overlays may need a lower threshold or manual cleanup.
-- GPU/Metal comparison is not implemented in v1.0.2; the engine is structured so acceleration can be added later.
+- GPU/Metal comparison is not implemented in v1.0.3; the engine is structured so acceleration can be added later.
 
 ## Build From Source
 

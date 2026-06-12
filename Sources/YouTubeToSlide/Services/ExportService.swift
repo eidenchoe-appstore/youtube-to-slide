@@ -5,6 +5,7 @@ import PDFKit
 enum ExportError: LocalizedError {
     case noSlides
     case couldNotCreatePDFPage(URL)
+    case couldNotReadImageSize(URL)
     case missingZip
 
     var errorDescription: String? {
@@ -13,6 +14,8 @@ enum ExportError: LocalizedError {
             return "No slides were detected."
         case let .couldNotCreatePDFPage(url):
             return "Could not add \(url.lastPathComponent) to the PDF."
+        case let .couldNotReadImageSize(url):
+            return "Could not read image dimensions for \(url.lastPathComponent)."
         case .missingZip:
             return "The system zip tool is required to create PPTX files."
         }
@@ -27,6 +30,8 @@ struct ExportResult {
 }
 
 struct ExportService {
+    private let baseSlideHeightEMU = 6_858_000
+
     func export(
         candidates: [SlideCandidate],
         title: String,
@@ -111,6 +116,8 @@ struct ExportService {
             throw ExportError.missingZip
         }
 
+        let firstImageSize = try imageSize(for: slides[0].fileURL)
+        let canvas = pptxCanvas(for: firstImageSize)
         let buildRoot = outputDirectory.appendingPathComponent(".pptx-build-\(UUID().uuidString)", isDirectory: true)
         defer { try? FileManager.default.removeItem(at: buildRoot) }
 
@@ -135,11 +142,13 @@ struct ExportService {
 
         try write("[Content_Types].xml", in: buildRoot, contents: contentTypesXML(slideCount: slides.count))
         try write(".rels", in: relsRoot, contents: packageRelsXML())
-        try write("presentation.xml", in: pptRoot, contents: presentationXML(slideCount: slides.count))
+        try write("presentation.xml", in: pptRoot, contents: presentationXML(slideCount: slides.count, canvas: canvas))
         try write("presentation.xml.rels", in: presentationRelsRoot, contents: presentationRelsXML(slideCount: slides.count))
 
         for slide in slides {
-            try write("slide\(slide.index).xml", in: slideRoot, contents: slideXML(imageRelationshipID: "rId1"))
+            let imageSize = try imageSize(for: slide.fileURL)
+            let placement = imagePlacement(for: imageSize, in: canvas)
+            try write("slide\(slide.index).xml", in: slideRoot, contents: slideXML(imageRelationshipID: "rId1", placement: placement))
             try write("slide\(slide.index).xml.rels", in: slideRelsRoot, contents: slideRelsXML(imageIndex: slide.index))
         }
 
@@ -189,7 +198,7 @@ struct ExportService {
         """
     }
 
-    private func presentationXML(slideCount: Int) -> String {
+    private func presentationXML(slideCount: Int, canvas: PPTXCanvas) -> String {
         let slideIDs = (1...slideCount).map {
             """
             <p:sldId id="\(255 + $0)" r:id="rId\($0)"/>
@@ -202,7 +211,7 @@ struct ExportService {
           <p:sldIdLst>
             \(slideIDs)
           </p:sldIdLst>
-          <p:sldSz cx="12192000" cy="6858000" type="wide"/>
+          <p:sldSz cx="\(canvas.widthEMU)" cy="\(canvas.heightEMU)" type="custom"/>
           <p:notesSz cx="6858000" cy="9144000"/>
         </p:presentation>
         """
@@ -223,7 +232,7 @@ struct ExportService {
         """
     }
 
-    private func slideXML(imageRelationshipID: String) -> String {
+    private func slideXML(imageRelationshipID: String, placement: PPTXImagePlacement) -> String {
         """
         <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
         <p:sld xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
@@ -254,8 +263,8 @@ struct ExportService {
                 </p:blipFill>
                 <p:spPr>
                   <a:xfrm>
-                    <a:off x="0" y="0"/>
-                    <a:ext cx="12192000" cy="6858000"/>
+                    <a:off x="\(placement.xEMU)" y="\(placement.yEMU)"/>
+                    <a:ext cx="\(placement.widthEMU)" cy="\(placement.heightEMU)"/>
                   </a:xfrm>
                   <a:prstGeom prst="rect"><a:avLst/></a:prstGeom>
                 </p:spPr>
@@ -275,6 +284,65 @@ struct ExportService {
         </Relationships>
         """
     }
+
+    private func imageSize(for url: URL) throws -> ImagePixelSize {
+        guard let image = NSImage(contentsOf: url),
+              let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil),
+              cgImage.width > 0,
+              cgImage.height > 0 else {
+            throw ExportError.couldNotReadImageSize(url)
+        }
+
+        return ImagePixelSize(width: cgImage.width, height: cgImage.height)
+    }
+
+    private func pptxCanvas(for imageSize: ImagePixelSize) -> PPTXCanvas {
+        let aspectRatio = Double(imageSize.width) / Double(imageSize.height)
+        let width = max(1, Int((Double(baseSlideHeightEMU) * aspectRatio).rounded()))
+        return PPTXCanvas(widthEMU: width, heightEMU: baseSlideHeightEMU)
+    }
+
+    private func imagePlacement(for imageSize: ImagePixelSize, in canvas: PPTXCanvas) -> PPTXImagePlacement {
+        let imageAspectRatio = Double(imageSize.width) / Double(imageSize.height)
+        let canvasAspectRatio = Double(canvas.widthEMU) / Double(canvas.heightEMU)
+
+        if imageAspectRatio >= canvasAspectRatio {
+            let width = canvas.widthEMU
+            let height = max(1, Int((Double(width) / imageAspectRatio).rounded()))
+            return PPTXImagePlacement(
+                xEMU: 0,
+                yEMU: max(0, (canvas.heightEMU - height) / 2),
+                widthEMU: width,
+                heightEMU: height
+            )
+        } else {
+            let height = canvas.heightEMU
+            let width = max(1, Int((Double(height) * imageAspectRatio).rounded()))
+            return PPTXImagePlacement(
+                xEMU: max(0, (canvas.widthEMU - width) / 2),
+                yEMU: 0,
+                widthEMU: width,
+                heightEMU: height
+            )
+        }
+    }
+}
+
+private struct ImagePixelSize {
+    var width: Int
+    var height: Int
+}
+
+private struct PPTXCanvas {
+    var widthEMU: Int
+    var heightEMU: Int
+}
+
+private struct PPTXImagePlacement {
+    var xEMU: Int
+    var yEMU: Int
+    var widthEMU: Int
+    var heightEMU: Int
 }
 
 private extension JSONEncoder {

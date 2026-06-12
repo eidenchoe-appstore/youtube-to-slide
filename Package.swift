@@ -14,6 +14,11 @@ let package = Package(
         .executableTarget(
             name: "YouTubeToSlide",
             path: "Sources/YouTubeToSlide"
+        ),
+        .testTarget(
+            name: "YouTubeToSlideTests",
+            dependencies: ["YouTubeToSlide"],
+            path: "Tests/YouTubeToSlideTests"
         )
     ]
 )
