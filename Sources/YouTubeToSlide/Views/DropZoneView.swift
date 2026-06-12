@@ -52,9 +52,8 @@ struct DropZoneView: View {
         for provider in providers {
             if provider.hasItemConformingToTypeIdentifier(UTType.fileURL.identifier) {
                 didAccept = true
-                provider.loadDataRepresentation(forTypeIdentifier: UTType.fileURL.identifier) { data, _ in
-                    guard let data,
-                          let url = URL(dataRepresentation: data, relativeTo: nil) else {
+                provider.loadItem(forTypeIdentifier: UTType.fileURL.identifier, options: nil) { item, _ in
+                    guard let url = fileURL(from: item) else {
                         return
                     }
 
@@ -66,5 +65,40 @@ struct DropZoneView: View {
         }
 
         return didAccept
+    }
+
+    private func fileURL(from item: NSSecureCoding?) -> URL? {
+        if let url = item as? URL {
+            return url.isFileURL ? url : nil
+        }
+
+        if let url = item as? NSURL {
+            let bridgedURL = url as URL
+            return bridgedURL.isFileURL ? bridgedURL : nil
+        }
+
+        if let data = item as? Data {
+            if let url = URL(dataRepresentation: data, relativeTo: nil),
+               url.isFileURL {
+                return url
+            }
+
+            if let string = String(data: data, encoding: .utf8),
+               let url = URL(string: string.trimmingCharacters(in: .whitespacesAndNewlines)),
+               url.isFileURL {
+                return url
+            }
+        }
+
+        if let string = item as? String {
+            let trimmed = string.trimmingCharacters(in: .whitespacesAndNewlines)
+            if let url = URL(string: trimmed), url.isFileURL {
+                return url
+            }
+            let fileURL = URL(fileURLWithPath: trimmed)
+            return fileURL.path.isEmpty ? nil : fileURL
+        }
+
+        return nil
     }
 }

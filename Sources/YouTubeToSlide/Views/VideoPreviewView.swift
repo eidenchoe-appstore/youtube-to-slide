@@ -61,25 +61,47 @@ struct VideoPreviewView: View {
     }
 }
 
-private struct LocalVideoPlayerView: View {
+private struct LocalVideoPlayerView: NSViewRepresentable {
     var url: URL
-    @State private var player: AVPlayer?
 
-    var body: some View {
-        Group {
-            if let player {
-                VideoPlayer(player: player)
-            } else {
-                ProgressView()
-            }
+    func makeCoordinator() -> Coordinator {
+        Coordinator()
+    }
+
+    func makeNSView(context: Context) -> AVPlayerView {
+        let playerView = AVPlayerView()
+        playerView.controlsStyle = .floating
+        playerView.videoGravity = .resizeAspect
+        playerView.allowsPictureInPicturePlayback = true
+        playerView.showsFullScreenToggleButton = true
+        playerView.player = context.coordinator.player(for: url)
+        return playerView
+    }
+
+    func updateNSView(_ playerView: AVPlayerView, context: Context) {
+        if context.coordinator.currentURL != url {
+            playerView.player?.pause()
+            playerView.player = context.coordinator.player(for: url)
         }
-        .onAppear {
-            if player == nil {
+    }
+
+    static func dismantleNSView(_ playerView: AVPlayerView, coordinator: Coordinator) {
+        playerView.player?.pause()
+        playerView.player = nil
+        coordinator.player = nil
+        coordinator.currentURL = nil
+    }
+
+    final class Coordinator {
+        var currentURL: URL?
+        var player: AVPlayer?
+
+        func player(for url: URL) -> AVPlayer {
+            if currentURL != url || player == nil {
+                currentURL = url
                 player = AVPlayer(url: url)
             }
-        }
-        .onDisappear {
-            player?.pause()
+            return player!
         }
     }
 }
