@@ -94,6 +94,7 @@ struct ExtractionJob: Identifiable, Equatable {
     var progress: Double
     var slides: [SlideFrame]
     var timeline: [TimelineEntry]
+    var youtubePreview: YouTubePreview?
     var createdAt: Date
 
     init(
@@ -103,7 +104,8 @@ struct ExtractionJob: Identifiable, Equatable {
         sourceURL: URL? = nil,
         title: String,
         outputDirectory: URL,
-        usesAutomaticOutputDirectory: Bool = true
+        usesAutomaticOutputDirectory: Bool = true,
+        youtubePreview: YouTubePreview? = nil
     ) {
         self.id = id
         self.inputType = inputType
@@ -116,6 +118,7 @@ struct ExtractionJob: Identifiable, Equatable {
         self.progress = 0
         self.slides = []
         self.timeline = []
+        self.youtubePreview = youtubePreview
         self.createdAt = Date()
     }
 }

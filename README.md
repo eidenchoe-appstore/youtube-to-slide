@@ -1,4 +1,9 @@
-# YouTube to Slide
+<h1>
+  <img src="icon.icon/Assets/icon%202.png" width="48" height="48" align="center" alt="YouTube to Slide icon">
+  YouTube to Slide
+</h1>
+
+[한국어 README](README.ko.md) | English
 
 Turn lecture videos into slide images, PDFs, and PowerPoint decks on macOS.
 
@@ -9,7 +14,8 @@ YouTube to Slide is a local macOS app for extracting mostly static lecture slide
 ## Features
 
 - Drag and drop local lecture videos into a batch queue
-- Paste a YouTube URL and process it through `yt-dlp`
+- Paste a YouTube URL and see a title/thumbnail preview before adding the job
+- Install missing `yt-dlp` or `ffmpeg` from inside the app when Homebrew is available
 - Detect slide changes with frame sampling and pixel-change ratio
 - Default 1 second sampling interval and 25% slide-change threshold
 - Export PNG slide folders, PDF files, PPTX decks, and timeline JSON
@@ -17,6 +23,14 @@ YouTube to Slide is a local macOS app for extracting mostly static lecture slide
 - Choose per-job and global output folders
 - Tune sampling interval, pixel delta, threshold, comparison width, and output resolution
 - Process batches locally with visible job progress and errors
+
+## Quick Demo
+
+Try the app with this short YouTube lecture video:
+
+https://www.youtube.com/watch?v=MxGW2WurKuM&list=PLRJhV4hUhIymmp5CCeIFPyxbknsdcXCc8&index=2
+
+Paste the URL into the YouTube field, wait for the preview card, click **Add**, then click **Start**.
 
 ## Requirements
 
@@ -27,6 +41,8 @@ brew install ffmpeg yt-dlp
 ```
 
 `ffmpeg` is required for all video processing. `yt-dlp` is only required for YouTube links.
+
+If a tool is missing, the app shows an **Install** button in the sidebar. The installer uses Homebrew when it is available. If Homebrew is not installed, install Homebrew first and then run the command above.
 
 The app looks for tools in this order:
 
@@ -71,10 +87,11 @@ Default values:
 
 1. Open YouTube to Slide.
 2. Drop one or more video files into the center drop zone, or paste a YouTube URL.
-3. Adjust threshold, sampling, output format, and resolution in the inspector.
-4. Choose an output folder if you do not want the default.
-5. Click **Start**.
-6. Click **Reveal Output** to open the result folder in Finder.
+3. For YouTube links, confirm the preview card, then click **Add**.
+4. Adjust threshold, sampling, output format, and resolution in the inspector.
+5. Choose an output folder if you do not want the default.
+6. Click **Start**.
+7. Click **Reveal Output** to open the result folder in Finder.
 
 ## Output Rules
 
@@ -131,13 +148,15 @@ Recommended starting points:
 
 Processing is local. Local videos stay on your Mac. YouTube links are downloaded locally with `yt-dlp` before processing. The app does not send video frames, slide images, or output files to an AI service.
 
+The YouTube preview card uses YouTube's public preview metadata and thumbnail URL for the pasted link.
+
 ## Limitations
 
 - YouTube support depends on `yt-dlp` and the availability of the public video URL.
 - The app extracts slide screenshots, not editable slide text.
 - PPTX output places each extracted slide image on a slide; it does not reconstruct native PowerPoint shapes.
 - Videos with live handwriting, frequent cursor movement, animated slides, or speaker overlays may need a lower threshold or manual cleanup.
-- GPU/Metal comparison is not implemented in v1.0.0; the engine is structured so acceleration can be added later.
+- GPU/Metal comparison is not implemented in v1.0.1; the engine is structured so acceleration can be added later.
 
 ## Build From Source
 
@@ -161,8 +180,6 @@ The build script uses it as the app icon when it is an ICNS file. If `icon.icon`
 
 ## Download
 
-The v1.0.0 DMG release asset will be published here:
+Download the latest DMG from:
 
-```text
-https://github.com/eidenchoe-appstore/youtube-to-slide/releases/tag/v1.0.0
-```
+https://github.com/eidenchoe-appstore/youtube-to-slide/releases/latest

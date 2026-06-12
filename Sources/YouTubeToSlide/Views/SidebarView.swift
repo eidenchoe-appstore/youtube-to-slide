@@ -19,7 +19,24 @@ struct SidebarView: View {
 
             VStack(alignment: .leading, spacing: 8) {
                 ToolStatusRow(name: "ffmpeg", available: store.toolStatus.hasFFmpeg, path: store.toolStatus.ffmpegPath)
+                if !store.toolStatus.hasFFmpeg {
+                    Button {
+                        store.installFFmpeg()
+                    } label: {
+                        Label(installTitle(for: "ffmpeg"), systemImage: "arrow.down.circle")
+                    }
+                    .disabled(store.installingFormula != nil)
+                }
+
                 ToolStatusRow(name: "yt-dlp", available: store.toolStatus.hasYtDlp, path: store.toolStatus.ytDlpPath)
+                if !store.toolStatus.hasYtDlp {
+                    Button {
+                        store.installYtDlp()
+                    } label: {
+                        Label(installTitle(for: "yt-dlp"), systemImage: "arrow.down.circle")
+                    }
+                    .disabled(store.installingFormula != nil)
+                }
 
                 Button {
                     store.refreshTools()
@@ -31,6 +48,13 @@ struct SidebarView: View {
             .font(.caption)
             .padding(12)
         }
+    }
+
+    private func installTitle(for formula: String) -> String {
+        if store.installingFormula == formula {
+            return "Installing \(formula)..."
+        }
+        return "Install \(formula)"
     }
 }
 

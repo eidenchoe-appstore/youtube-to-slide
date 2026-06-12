@@ -8,6 +8,7 @@ final class JobStore: ObservableObject {
     @Published var settings: AppSettings
     @Published var toolStatus: ToolStatus
     @Published var isProcessing = false
+    @Published var installingFormula: String?
     @Published var message: String?
 
     private var processingTask: Task<Void, Never>?
@@ -58,7 +59,7 @@ final class JobStore: ObservableObject {
         }
     }
 
-    func addYouTubeURL(_ rawURL: String) {
+    func addYouTubeURL(_ rawURL: String, preview: YouTubePreview? = nil) {
         let trimmed = rawURL.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
             return
@@ -69,7 +70,7 @@ final class JobStore: ObservableObject {
             return
         }
 
-        let title = "YouTube Video"
+        let title = preview?.title ?? "YouTube Video"
         let outputDirectory = deduplicatedOutputDirectory(
             OutputPathResolver.youtubeOutputDirectory(title: title, preferredRoot: settings.defaultOutputDirectory)
         )
@@ -77,10 +78,19 @@ final class JobStore: ObservableObject {
             inputType: .youtube,
             source: trimmed,
             title: title,
-            outputDirectory: outputDirectory
+            outputDirectory: outputDirectory,
+            youtubePreview: preview
         )
         jobs.append(job)
         selectedJobID = job.id
+    }
+
+    func installYtDlp() {
+        installFormula("yt-dlp")
+    }
+
+    func installFFmpeg() {
+        installFormula("ffmpeg")
     }
 
     func removeSelectedJob() {
@@ -220,6 +230,28 @@ final class JobStore: ObservableObject {
             return
         }
         mutate(&jobs[index])
+    }
+
+    private func installFormula(_ formula: String) {
+        guard installingFormula == nil else {
+            return
+        }
+
+        installingFormula = formula
+
+        Task { [weak self] in
+            guard let self else { return }
+            do {
+                try await Task.detached(priority: .userInitiated) {
+                    try ToolInstallerService().install(formula: formula)
+                }.value
+                self.refreshTools()
+                self.message = "\(formula) installed successfully."
+            } catch {
+                self.message = error.localizedDescription
+            }
+            self.installingFormula = nil
+        }
     }
 
     private func deduplicatedOutputDirectory(_ proposed: URL) -> URL {
