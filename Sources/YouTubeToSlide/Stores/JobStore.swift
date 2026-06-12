@@ -19,7 +19,16 @@ final class JobStore: ObservableObject {
     @Published var notionConnectionName: String?
     @Published var isValidatingNotionAPIKey = false
     @Published var selectedSlideIndex: Int?
-    @Published var message: String?
+    @Published var devLogEntries: [DevLogEntry] = []
+    @Published var message: String? {
+        didSet {
+            guard let message,
+                  message != oldValue else {
+                return
+            }
+            appendDevLog(message, level: messageLogLevel(for: message))
+        }
+    }
 
     private var processingTask: Task<Void, Never>?
     private var studyTask: Task<Void, Never>?
@@ -48,6 +57,7 @@ final class JobStore: ObservableObject {
         self.hasOpenRouterAPIKey = KeychainService.loadOpenRouterAPIKey() != nil
         self.hasNotionAPIKey = KeychainService.loadNotionAPIKey() != nil
         self.notionConnectionName = UserDefaults.standard.string(forKey: "notionConnectionName")
+        appendDevLog("App initialized.", level: .debug)
     }
 
     var selectedJob: ExtractionJob? {
@@ -72,6 +82,10 @@ final class JobStore: ObservableObject {
 
     func refreshTools() {
         toolStatus = ToolResolver.resolve()
+        appendDevLog(
+            "Tool check: ffmpeg=\(toolStatus.hasFFmpeg ? "available" : "missing"), yt-dlp=\(toolStatus.hasYtDlp ? "available" : "missing").",
+            level: .debug
+        )
     }
 
     func addLocalVideos(_ urls: [URL]) {
@@ -95,6 +109,7 @@ final class JobStore: ObservableObject {
             jobs.append(job)
             selectedJobID = job.id
             selectedSlideIndex = nil
+            appendDevLog("Added video job: \(job.title).", level: .info)
         }
     }
 
@@ -123,6 +138,7 @@ final class JobStore: ObservableObject {
         jobs.append(job)
         selectedJobID = job.id
         selectedSlideIndex = nil
+        appendDevLog("Added YouTube job: \(job.title).", level: .info)
     }
 
     func installYtDlp() {
@@ -144,6 +160,7 @@ final class JobStore: ObservableObject {
             try KeychainService.saveOpenRouterAPIKey(trimmed)
             hasOpenRouterAPIKey = true
             openRouterAPIKeyInput = ""
+            appendDevLog("OpenRouter API key saved.", level: .success)
             message = "OpenRouter API key saved to Keychain."
         } catch {
             message = error.localizedDescription
@@ -155,6 +172,7 @@ final class JobStore: ObservableObject {
             try KeychainService.deleteOpenRouterAPIKey()
             hasOpenRouterAPIKey = false
             openRouterAPIKeyInput = ""
+            appendDevLog("OpenRouter API key removed.", level: .warning)
             message = "OpenRouter API key removed."
         } catch {
             message = error.localizedDescription
@@ -179,6 +197,7 @@ final class JobStore: ObservableObject {
                 notionAPIKeyInput = ""
                 notionConnectionName = identity.displayName
                 UserDefaults.standard.set(identity.displayName, forKey: "notionConnectionName")
+                appendDevLog("Notion API token saved for integration: \(identity.displayName).", level: .success)
                 message = "Notion API token saved for \(identity.displayName)."
             } catch {
                 hasNotionAPIKey = KeychainService.loadNotionAPIKey() != nil
@@ -195,6 +214,7 @@ final class JobStore: ObservableObject {
             notionAPIKeyInput = ""
             notionConnectionName = nil
             UserDefaults.standard.removeObject(forKey: "notionConnectionName")
+            appendDevLog("Notion API token removed.", level: .warning)
             message = "Notion API token removed."
         } catch {
             message = error.localizedDescription
@@ -210,6 +230,7 @@ final class JobStore: ObservableObject {
         }
         self.selectedJobID = jobs.first?.id
         self.selectedSlideIndex = jobs.first?.slides.first?.index
+        appendDevLog("Removed selected job.", level: .info)
     }
 
     func setOutputDirectory(_ url: URL, for jobID: UUID) {
@@ -217,21 +238,29 @@ final class JobStore: ObservableObject {
             job.outputDirectory = url
             job.usesAutomaticOutputDirectory = false
         }
+        appendDevLog("Changed output directory: \(url.path).", level: .info)
     }
 
     func setDefaultOutputDirectory(_ url: URL?) {
         settings.defaultOutputDirectory = url
         UserDefaults.standard.set(url?.path, forKey: "defaultOutputDirectory")
+        if let url {
+            appendDevLog("Default output directory changed: \(url.path).", level: .info)
+        } else {
+            appendDevLog("Default output directory reset.", level: .info)
+        }
     }
 
     func setPrimaryStudyModelID(_ modelID: String) {
         settings.primaryStudyModelID = modelID
         UserDefaults.standard.set(modelID, forKey: "primaryStudyModelID")
+        appendDevLog("Primary study model set: \(modelID).", level: .debug)
     }
 
     func setFallbackStudyModelID(_ modelID: String) {
         settings.fallbackStudyModelID = modelID
         UserDefaults.standard.set(modelID, forKey: "fallbackStudyModelID")
+        appendDevLog("Fallback study model set: \(modelID).", level: .debug)
     }
 
     func setNotionParentPageURL(_ parentPageURL: String) {
@@ -244,6 +273,7 @@ final class JobStore: ObservableObject {
             return
         }
         NSWorkspace.shared.activateFileViewerSelecting([job.outputDirectory])
+        appendDevLog("Revealed output directory: \(job.outputDirectory.path).", level: .debug)
     }
 
     func openNotionPage(for job: ExtractionJob?) {
@@ -252,6 +282,7 @@ final class JobStore: ObservableObject {
             return
         }
         NSWorkspace.shared.open(url)
+        appendDevLog("Opened Notion page: \(url.absoluteString).", level: .debug)
     }
 
     func selectSlide(_ slideIndex: Int) {
@@ -280,6 +311,7 @@ final class JobStore: ObservableObject {
         }
 
         isProcessing = true
+        appendDevLog("Processing started for \(queuedIDs.count) job(s).", level: .info)
 
         processingTask = Task { [weak self] in
             guard let self else { return }
@@ -291,6 +323,7 @@ final class JobStore: ObservableObject {
                 guard let snapshot = self.jobs.first(where: { $0.id == jobID }) else {
                     continue
                 }
+                self.appendDevLog("Processing job: \(snapshot.title).", level: .info)
 
                 if snapshot.inputType == .youtube && !self.toolStatus.hasYtDlp {
                     self.updateJob(jobID) { job in
@@ -342,15 +375,18 @@ final class JobStore: ObservableObject {
                     if self.selectedJobID == jobID {
                         self.selectedSlideIndex = result.export.slides.first?.index
                     }
+                    self.appendDevLog("Processing completed: \(result.title) (\(result.export.slides.count) slide(s)).", level: .success)
                 } catch {
                     self.updateJob(jobID) { job in
                         job.status = .failed(error.localizedDescription)
                     }
+                    self.appendDevLog("Processing failed: \(error.localizedDescription)", level: .error)
                 }
             }
 
             self.isProcessing = false
             self.processingTask = nil
+            self.appendDevLog("Processing queue finished.", level: .info)
         }
     }
 
@@ -406,6 +442,7 @@ final class JobStore: ObservableObject {
         updateJob(job.id) { job in
             job.chatMessages.append(StudyChatMessage(role: .user, content: trimmed))
         }
+        appendDevLog("Study chat question submitted. Scope: \(scope.rawValue).", level: .info)
 
         Task { [weak self] in
             guard let self else { return }
@@ -423,10 +460,12 @@ final class JobStore: ObservableObject {
                 self.updateJob(job.id) { job in
                     job.chatMessages.append(StudyChatMessage(role: .assistant, content: response))
                 }
+                self.appendDevLog("Study chat response generated.", level: .success)
             } catch {
                 self.updateJob(job.id) { job in
                     job.chatMessages.append(StudyChatMessage(role: .assistant, content: "Error: \(error.localizedDescription)"))
                 }
+                self.appendDevLog("Study chat failed: \(error.localizedDescription)", level: .error)
             }
         }
     }
@@ -494,13 +533,20 @@ final class JobStore: ObservableObject {
         for job in jobs where !job.status.isTerminal {
             updateJob(job.id) { $0.status = .cancelled }
         }
+        appendDevLog("Processing cancelled.", level: .warning)
     }
 
     private func updateJob(_ id: UUID, mutate: (inout ExtractionJob) -> Void) {
         guard let index = jobs.firstIndex(where: { $0.id == id }) else {
             return
         }
+        let oldStatus = jobs[index].status
         mutate(&jobs[index])
+        let newStatus = jobs[index].status
+        if oldStatus != newStatus {
+            let detail = newStatus.detail.map { " (\($0))" } ?? ""
+            appendDevLog("Job \(jobs[index].title) status: \(oldStatus.label) -> \(newStatus.label)\(detail).", level: logLevel(for: newStatus))
+        }
     }
 
     private func installFormula(_ formula: String) {
@@ -509,6 +555,7 @@ final class JobStore: ObservableObject {
         }
 
         installingFormula = formula
+        appendDevLog("Installing tool: \(formula).", level: .info)
 
         Task { [weak self] in
             guard let self else { return }
@@ -517,8 +564,10 @@ final class JobStore: ObservableObject {
                     try ToolInstallerService().install(formula: formula)
                 }.value
                 self.refreshTools()
+                self.appendDevLog("\(formula) installed successfully.", level: .success)
                 self.message = "\(formula) installed successfully."
             } catch {
+                self.appendDevLog("\(formula) install failed: \(error.localizedDescription)", level: .error)
                 self.message = error.localizedDescription
             }
             self.installingFormula = nil
@@ -556,6 +605,7 @@ final class JobStore: ObservableObject {
         isGeneratingStudyNotes = true
         isCreatingNotionPage = exportNotionPageAfterCompletion
         studyProgress = 0
+        appendDevLog("Study note generation started for \(slides.count) slide(s) using \(modelIDs.joined(separator: ", ")).", level: .info)
 
         studyTask = Task { [weak self] in
             guard let self else { return }
@@ -573,6 +623,7 @@ final class JobStore: ObservableObject {
                     self.updateJob(jobID) { job in
                         job.studyNotes[slide.index] = note
                     }
+                    self.appendDevLog("Generated study note for slide \(slide.index) with \(note.modelID).", level: .success)
                 } catch {
                     self.message = "Slide \(slide.index) study note failed: \(error.localizedDescription)"
                     completed = false
@@ -598,6 +649,7 @@ final class JobStore: ObservableObject {
             self.isGeneratingStudyNotes = false
             self.isCreatingNotionPage = false
             self.studyTask = nil
+            self.appendDevLog("Study note generation \(completed ? "finished" : "stopped").", level: completed ? .success : .warning)
         }
     }
 
@@ -641,6 +693,7 @@ final class JobStore: ObservableObject {
         parentPageURL: String
     ) async -> Bool {
         do {
+            appendDevLog("Sending Notion page: \(job.title).", level: .info)
             let result = try await Task.detached(priority: .userInitiated) {
                 try await NotionPageExporter(apiKey: apiKey).export(job: job, parentPageURL: parentPageURL)
             }.value
@@ -648,11 +701,68 @@ final class JobStore: ObservableObject {
             updateJob(jobID) { job in
                 job.notionPageURL = result.pageURL
             }
+            appendDevLog("Notion page created: \(result.pageURL.absoluteString)", level: .success)
             message = "Notion page created: \(result.pageURL.absoluteString)"
             return true
         } catch {
+            appendDevLog("Notion page creation failed: \(error.localizedDescription)", level: .error)
             message = error.localizedDescription
             return false
+        }
+    }
+
+    func clearDevLogs() {
+        devLogEntries.removeAll()
+        appendDevLog("Dev log cleared.", level: .debug)
+    }
+
+    func copyDevLogsToClipboard() {
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.setString(devLogText, forType: .string)
+        appendDevLog("Dev log copied to clipboard.", level: .debug)
+    }
+
+    var devLogText: String {
+        devLogEntries.map(\.line).joined(separator: "\n")
+    }
+
+    private func appendDevLog(_ message: String, level: DevLogLevel) {
+        let trimmed = message.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            return
+        }
+
+        devLogEntries.append(DevLogEntry(level: level, message: trimmed))
+        if devLogEntries.count > 500 {
+            devLogEntries.removeFirst(devLogEntries.count - 500)
+        }
+    }
+
+    private func messageLogLevel(for message: String) -> DevLogLevel {
+        let lowercased = message.lowercased()
+        if lowercased.contains("failed") || lowercased.contains("error") || lowercased.contains("required") {
+            return .error
+        }
+        if lowercased.hasPrefix("enter ") || lowercased.contains("missing") || lowercased.contains("cancelled") || lowercased.contains("removed") {
+            return .warning
+        }
+        if lowercased.contains("saved") || lowercased.contains("created") || lowercased.contains("installed successfully") {
+            return .success
+        }
+        return .info
+    }
+
+    private func logLevel(for status: JobStatus) -> DevLogLevel {
+        switch status {
+        case .completed:
+            return .success
+        case .cancelled:
+            return .warning
+        case .failed:
+            return .error
+        default:
+            return .info
         }
     }
 

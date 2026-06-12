@@ -29,6 +29,17 @@ struct InspectorView: View {
             .tabItem {
                 Label("API Settings", systemImage: "key.fill")
             }
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: 22) {
+                    devLogSummarySection
+                    devLogSection
+                }
+                .padding(18)
+            }
+            .tabItem {
+                Label("Log (Dev)", systemImage: "terminal")
+            }
         }
         .background(.regularMaterial)
     }
@@ -219,6 +230,76 @@ struct InspectorView: View {
         }
     }
 
+    private var devLogSummarySection: some View {
+        InspectorSection("Runtime Snapshot") {
+            VStack(alignment: .leading, spacing: 8) {
+                SettingValueRow(label: "Jobs", value: "\(store.jobs.count)")
+                SettingValueRow(label: "Processing", value: store.isProcessing ? "Running" : "Idle")
+                SettingValueRow(label: "Study notes", value: store.isGeneratingStudyNotes ? "Running" : "Idle")
+                SettingValueRow(label: "Notion upload", value: store.isCreatingNotionPage ? "Running" : "Idle")
+                SettingValueRow(label: "ffmpeg", value: store.toolStatus.hasFFmpeg ? "Available" : "Missing")
+                SettingValueRow(label: "yt-dlp", value: store.toolStatus.hasYtDlp ? "Available" : "Missing")
+
+                if let job = store.selectedJob {
+                    Divider()
+                    Text(job.title)
+                        .font(.caption.weight(.semibold))
+                        .lineLimit(2)
+                        .textSelection(.enabled)
+                    SettingValueRow(label: "Selected status", value: job.status.label)
+                    SettingValueRow(label: "Slides", value: "\(job.slides.count)")
+                    if let detail = job.status.detail {
+                        Text(detail)
+                            .font(.caption)
+                            .foregroundStyle(.red)
+                            .textSelection(.enabled)
+                    }
+                }
+            }
+        }
+    }
+
+    private var devLogSection: some View {
+        InspectorSection("Session Log") {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack {
+                    Button("Copy") {
+                        store.copyDevLogsToClipboard()
+                    }
+                    .disabled(store.devLogEntries.isEmpty)
+
+                    Button("Clear") {
+                        store.clearDevLogs()
+                    }
+                    .disabled(store.devLogEntries.isEmpty)
+
+                    Spacer()
+
+                    Text("\(store.devLogEntries.count) entries")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                Text("Local session log. API key values are not recorded.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                if store.devLogEntries.isEmpty {
+                    Text("No log entries yet.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                } else {
+                    LazyVStack(alignment: .leading, spacing: 0) {
+                        ForEach(Array(store.devLogEntries.reversed())) { entry in
+                            DevLogEntryRow(entry: entry)
+                            Divider()
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     private var primaryModelBinding: Binding<String> {
         Binding {
             store.settings.primaryStudyModelID
@@ -353,6 +434,44 @@ private struct SettingValueRow: View {
             Spacer()
             Text(value)
                 .foregroundStyle(.secondary)
+        }
+    }
+}
+
+private struct DevLogEntryRow: View {
+    var entry: DevLogEntry
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 6) {
+                Text(entry.level.rawValue)
+                    .font(.caption2.weight(.semibold).monospaced())
+                    .foregroundStyle(levelColor)
+                Text(entry.timestamp)
+                    .font(.caption.monospaced())
+                    .foregroundStyle(.secondary)
+                    .textSelection(.enabled)
+            }
+            Text(entry.message)
+                .font(.caption.monospaced())
+                .foregroundStyle(.primary)
+                .textSelection(.enabled)
+        }
+        .padding(.vertical, 6)
+    }
+
+    private var levelColor: Color {
+        switch entry.level {
+        case .debug:
+            return .secondary
+        case .info:
+            return .blue
+        case .success:
+            return .green
+        case .warning:
+            return .orange
+        case .error:
+            return .red
         }
     }
 }
