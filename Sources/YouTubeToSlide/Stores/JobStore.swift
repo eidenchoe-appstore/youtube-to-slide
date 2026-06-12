@@ -28,6 +28,12 @@ final class JobStore: ObservableObject {
         if let storedPath = UserDefaults.standard.string(forKey: "defaultOutputDirectory") {
             initialSettings.defaultOutputDirectory = URL(fileURLWithPath: storedPath)
         }
+        if let storedPrimaryModelID = UserDefaults.standard.string(forKey: "primaryStudyModelID") {
+            initialSettings.primaryStudyModelID = storedPrimaryModelID
+        }
+        if let storedFallbackModelID = UserDefaults.standard.string(forKey: "fallbackStudyModelID") {
+            initialSettings.fallbackStudyModelID = storedFallbackModelID
+        }
         self.settings = initialSettings
         self.toolStatus = ToolResolver.resolve()
         self.hasOpenRouterAPIKey = KeychainService.loadOpenRouterAPIKey() != nil
@@ -167,6 +173,16 @@ final class JobStore: ObservableObject {
         UserDefaults.standard.set(url?.path, forKey: "defaultOutputDirectory")
     }
 
+    func setPrimaryStudyModelID(_ modelID: String) {
+        settings.primaryStudyModelID = modelID
+        UserDefaults.standard.set(modelID, forKey: "primaryStudyModelID")
+    }
+
+    func setFallbackStudyModelID(_ modelID: String) {
+        settings.fallbackStudyModelID = modelID
+        UserDefaults.standard.set(modelID, forKey: "fallbackStudyModelID")
+    }
+
     func revealOutput(for job: ExtractionJob?) {
         guard let job else {
             return
@@ -295,7 +311,13 @@ final class JobStore: ObservableObject {
             return
         }
 
-        generateStudyNotes(jobID: job.id, slides: job.slides)
+        let missingSlides = slidesMissingStudyNotes(in: job)
+        guard !missingSlides.isEmpty else {
+            message = "All slide study notes already exist. Use Note to Notion Page to export them."
+            return
+        }
+
+        generateStudyNotes(jobID: job.id, slides: missingSlides)
     }
 
     func askStudyQuestion(_ question: String, scope: StudyChatScope) {
@@ -314,7 +336,7 @@ final class JobStore: ObservableObject {
             return
         }
 
-        let modelID = settings.studyModelID
+        let modelIDs = settings.studyModelIDs
         let selectedSlideSnapshot = selectedSlide
 
         updateJob(job.id) { job in
@@ -325,7 +347,7 @@ final class JobStore: ObservableObject {
             guard let self else { return }
             do {
                 let response = try await Task.detached(priority: .userInitiated) {
-                    let client = OpenRouterClient(apiKey: apiKey, modelID: modelID)
+                    let client = OpenRouterClient(apiKey: apiKey, modelIDs: modelIDs)
                     return try await client.answerQuestion(
                         question: trimmed,
                         job: job,
@@ -356,10 +378,7 @@ final class JobStore: ObservableObject {
             return
         }
 
-        let missingSlides = job.slides.filter { slide in
-            let note = job.studyNotes[slide.index]?.markdown.trimmingCharacters(in: .whitespacesAndNewlines)
-            return note?.isEmpty ?? true
-        }
+        let missingSlides = slidesMissingStudyNotes(in: job)
 
         guard missingSlides.isEmpty else {
             generateStudyNotes(jobID: job.id, slides: missingSlides, exportNotionPageAfterCompletion: true)
@@ -382,6 +401,13 @@ final class JobStore: ObservableObject {
             message = "Full Note to Notion Page ZIP created: \(outputURL.lastPathComponent)"
         } catch {
             message = error.localizedDescription
+        }
+    }
+
+    private func slidesMissingStudyNotes(in job: ExtractionJob) -> [SlideFrame] {
+        job.slides.filter { slide in
+            let note = job.studyNotes[slide.index]?.markdown.trimmingCharacters(in: .whitespacesAndNewlines)
+            return note?.isEmpty ?? true
         }
     }
 
@@ -451,14 +477,14 @@ final class JobStore: ObservableObject {
             return
         }
 
-        let modelID = settings.studyModelID
+        let modelIDs = settings.studyModelIDs
         isGeneratingStudyNotes = true
         isCreatingNotionPage = exportNotionPageAfterCompletion
         studyProgress = 0
 
         studyTask = Task { [weak self] in
             guard let self else { return }
-            let client = OpenRouterClient(apiKey: apiKey, modelID: modelID)
+            let client = OpenRouterClient(apiKey: apiKey, modelIDs: modelIDs)
             var completed = true
 
             for (offset, slide) in slides.enumerated() {

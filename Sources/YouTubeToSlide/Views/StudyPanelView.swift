@@ -56,7 +56,7 @@ struct StudyPanelView: View {
                 .disabled(job.slides.isEmpty)
                 .disabled(store.isGeneratingStudyNotes)
                 .disabled(!store.hasOpenRouterAPIKey && !allSlidesHaveNotes)
-                .help("Generate study notes for every slide, then export one Notion-ready HTML + assets ZIP.")
+                .help("Generate missing study notes, then export one Notion-ready Markdown + assets ZIP.")
 
                 Spacer()
             }
@@ -136,7 +136,7 @@ struct StudyPanelView: View {
                 .padding(10)
                 .background(.background, in: RoundedRectangle(cornerRadius: 8))
             } else {
-                Text("Select a slide and click Study Selected, or click Note to Notion Page to generate notes for the full deck and export a Notion-ready ZIP.")
+                Text("Select a slide and click Study Selected, or click Note to Notion Page to generate missing notes and export a Notion-ready Markdown ZIP.")
                     .font(.callout)
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, alignment: .leading)

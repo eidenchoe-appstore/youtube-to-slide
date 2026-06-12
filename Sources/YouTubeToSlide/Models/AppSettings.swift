@@ -10,8 +10,17 @@ struct AppSettings: Equatable {
     var exportPNG: Bool = true
     var exportPDF: Bool = false
     var exportPPTX: Bool = false
-    var studyModelID: String = OpenRouterStudyModel.nemotronNano.id
+    var primaryStudyModelID: String = OpenRouterStudyModel.nemotronNano.id
+    var fallbackStudyModelID: String = OpenRouterStudyModel.gemma31B.id
     var defaultOutputDirectory: URL?
+
+    var studyModelIDs: [String] {
+        var modelIDs: [String] = []
+        for modelID in [primaryStudyModelID, fallbackStudyModelID] where !modelIDs.contains(modelID) {
+            modelIDs.append(modelID)
+        }
+        return modelIDs
+    }
 
     var selectedFormats: Set<OutputFormat> {
         var formats = Set<OutputFormat>()

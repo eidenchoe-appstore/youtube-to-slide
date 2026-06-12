@@ -21,7 +21,7 @@ YouTube to Slide is a local macOS app for extracting mostly static lecture slide
 - Export PNG slide folders by default, with optional PDF, PPTX, and timeline JSON
 - Generate slide-by-slide study notes with OpenRouter vision models
 - Chat about a selected slide or the whole lecture
-- Create a full-deck **Note to Notion Page** ZIP that generates missing slide notes and packages HTML plus PNG assets
+- Create a full-deck **Note to Notion Page** ZIP that generates missing slide notes and packages Markdown plus PNG assets
 - Collapse or expand Processing, PNG Slides, and Chat & Study sections in the main workspace
 - Keep output next to the source video by default
 - Choose per-job and global output folders
@@ -62,15 +62,15 @@ For setup steps, see [OpenRouter Setup for YouTube to Slide](docs/openrouter-set
 
 ## AI Study Notes
 
-After extracting slides, save an OpenRouter API key in the inspector:
+After extracting slides, save an OpenRouter API key in the inspector's **API Settings** tab:
 
 1. Paste your OpenRouter API key.
 2. Click **Save Key**.
-3. Choose a model.
+3. Choose **First model** and **Second model** for fallback.
 4. Click **Study Selected**, **Study All Slides**, or ask a question in the chat box when you want manual study actions.
-5. Click **Note to Notion Page** to generate missing notes for every slide and create a ZIP with one HTML page and slide image assets.
+5. Click **Note to Notion Page** to generate missing notes for every slide and create a ZIP with one Markdown page and slide image assets.
 
-The ZIP is intended for Notion import: it contains `Title.html` and an `assets/` folder with the referenced PNG slides.
+The ZIP is intended for Notion import: it contains `Title.md` and an `assets/` folder with the referenced PNG slides. This is more reliable for Notion import than the earlier HTML export path.
 
 Each generated study note is prompted to start with an inferred slide title and then use section headings:
 
@@ -84,11 +84,14 @@ Each generated study note is prompted to start with an inferred slide title and 
 ## 복습 질문
 ```
 
-Default model:
+Default model order:
 
 ```text
-nvidia/nemotron-nano-12b-v2-vl:free
+First model: nvidia/nemotron-nano-12b-v2-vl:free
+Second model: google/gemma-4-31b-it:free
 ```
+
+If the first model is rate-limited or temporarily unavailable, the app retries the same request with the second model. If both selectors use the same model, duplicate fallback is skipped.
 
 Model choices:
 
@@ -99,6 +102,8 @@ Model choices:
 | `nvidia/llama-nemotron-rerank-vl-1b-v2:free` | Fast lightweight visual relevance checks when speed matters |
 
 The app sends selected PNG slide images to OpenRouter only when you explicitly run a study or chat action.
+
+For token efficiency, **Study All Slides** and **Note to Notion Page** reuse existing slide notes and only send slides whose notes are still missing. Whole-deck chat uses generated notes as the primary context when they are available.
 
 ## How It Works
 
@@ -179,7 +184,7 @@ VideoTitle/
 | PDF | Best for reading, printing, and sharing |
 | PPTX | Best for opening the result as a PowerPoint deck; slide size keeps the extracted video frame aspect ratio |
 | Timeline JSON | Best for auditing timestamps and change ratios |
-| Note to Notion Page ZIP | Best for importing a full-deck study page into Notion; generates missing notes for every slide, then packages Notion-style HTML plus an `assets/` folder |
+| Note to Notion Page ZIP | Best for importing a full-deck study page into Notion; generates missing notes for every slide, then packages Notion-safe Markdown plus an `assets/` folder |
 
 ## Tuning
 
@@ -210,7 +215,7 @@ OpenRouter study-note and chat features send selected slide PNGs and your prompt
 - The app extracts slide screenshots, not editable slide text.
 - PPTX output places each extracted slide image on a slide while preserving the extracted video frame aspect ratio; it does not reconstruct native PowerPoint shapes.
 - Videos with live handwriting, frequent cursor movement, animated slides, or speaker overlays may need a lower threshold or manual cleanup.
-- GPU/Metal comparison is not implemented in v2.0.0; the engine is structured so acceleration can be added later.
+- GPU/Metal comparison is not implemented in v2.1.0; the engine is structured so acceleration can be added later.
 
 ## Build From Source
 

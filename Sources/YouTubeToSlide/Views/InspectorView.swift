@@ -4,15 +4,30 @@ struct InspectorView: View {
     @EnvironmentObject private var store: JobStore
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 22) {
-                processingSection
-                outputSection
-                studySection
-                selectedJobSection
-                accelerationSection
+        TabView {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 22) {
+                    processingSection
+                    outputSection
+                    selectedJobSection
+                    accelerationSection
+                }
+                .padding(18)
             }
-            .padding(18)
+            .tabItem {
+                Label("Processing", systemImage: "slider.horizontal.3")
+            }
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: 22) {
+                    apiSettingsSection
+                    modelFallbackSection
+                }
+                .padding(18)
+            }
+            .tabItem {
+                Label("API Settings", systemImage: "key.fill")
+            }
         }
         .background(.regularMaterial)
     }
@@ -84,8 +99,8 @@ struct InspectorView: View {
         }
     }
 
-    private var studySection: some View {
-        InspectorSection("AI Study Notes") {
+    private var apiSettingsSection: some View {
+        InspectorSection("OpenRouter API") {
             VStack(alignment: .leading, spacing: 12) {
                 HStack {
                     Image(systemName: store.hasOpenRouterAPIKey ? "checkmark.circle.fill" : "key.fill")
@@ -109,23 +124,72 @@ struct InspectorView: View {
                     }
                     .disabled(!store.hasOpenRouterAPIKey)
                 }
+            }
+        }
+    }
 
-                Picker("Model", selection: $store.settings.studyModelID) {
+    private var modelFallbackSection: some View {
+        InspectorSection("Model Fallback") {
+            VStack(alignment: .leading, spacing: 12) {
+                Picker("First model", selection: primaryModelBinding) {
                     ForEach(OpenRouterStudyModel.allCases) { model in
                         Text("\(model.displayName) - \(model.badge)")
                             .tag(model.id)
                     }
                 }
 
-                let model = OpenRouterStudyModel.model(for: store.settings.studyModelID)
-                Text(model.id)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .textSelection(.enabled)
-                Text(model.advantage)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                modelDescription(for: store.settings.primaryStudyModelID)
+
+                Divider()
+
+                Picker("Second model", selection: fallbackModelBinding) {
+                    ForEach(OpenRouterStudyModel.allCases) { model in
+                        Text("\(model.displayName) - \(model.badge)")
+                            .tag(model.id)
+                    }
+                }
+
+                modelDescription(for: store.settings.fallbackStudyModelID)
+
+                if store.settings.primaryStudyModelID == store.settings.fallbackStudyModelID {
+                    Label("First and second models are the same, so fallback will be skipped.", systemImage: "exclamationmark.triangle")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                } else {
+                    Label("If the first model is rate-limited or temporarily unavailable, the app retries with the second model.", systemImage: "arrow.triangle.2.circlepath")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
             }
+        }
+    }
+
+    private var primaryModelBinding: Binding<String> {
+        Binding {
+            store.settings.primaryStudyModelID
+        } set: { modelID in
+            store.setPrimaryStudyModelID(modelID)
+        }
+    }
+
+    private var fallbackModelBinding: Binding<String> {
+        Binding {
+            store.settings.fallbackStudyModelID
+        } set: { modelID in
+            store.setFallbackStudyModelID(modelID)
+        }
+    }
+
+    private func modelDescription(for modelID: String) -> some View {
+        let model = OpenRouterStudyModel.model(for: modelID)
+        return VStack(alignment: .leading, spacing: 4) {
+            Text(model.id)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .textSelection(.enabled)
+            Text(model.advantage)
+                .font(.caption)
+                .foregroundStyle(.secondary)
         }
     }
 

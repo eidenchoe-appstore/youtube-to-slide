@@ -22,16 +22,39 @@ enum OpenRouterError: LocalizedError {
 
 struct OpenRouterClient {
     var apiKey: String
-    var modelID: String
+    var modelIDs: [String]
+
+    init(apiKey: String, modelID: String) {
+        self.apiKey = apiKey
+        self.modelIDs = [modelID]
+    }
+
+    init(apiKey: String, modelIDs: [String]) {
+        self.apiKey = apiKey
+        var uniqueModelIDs: [String] = []
+        for modelID in modelIDs where !uniqueModelIDs.contains(modelID) {
+            uniqueModelIDs.append(modelID)
+        }
+        self.modelIDs = uniqueModelIDs.isEmpty ? [OpenRouterStudyModel.nemotronNano.id] : uniqueModelIDs
+    }
 
     func generateStudyNote(slide: SlideFrame, lectureTitle: String) async throws -> SlideStudyNote {
         let prompt = """
         You are a lecture study-note assistant. Analyze the attached lecture slide image.
 
         Write in Korean by default, while preserving important English technical terms.
-        Return concise structured study-note text with Markdown headings and bullet lists.
+        Return concise structured study-note text in Notion-import-safe Markdown.
         You must infer a study-friendly slide title from the image. The first non-empty line must be:
         # {inferred slide title}
+
+        Markdown rules:
+        - Use only #, ##, and ### headings.
+        - Use "- " for bullet lists.
+        - Use numbered lists only when sequence matters.
+        - Use **bold**, *italic*, `inline code`, fenced code blocks, blockquotes, simple Markdown tables, and --- dividers when useful.
+        - Do not use HTML tags, footnotes, internal anchor links, definition lists, highlight syntax, Mermaid, or complex tables.
+        - For equations, prefer a plain-language explanation plus `inline code` for short formulas. Use $...$ or $$...$$ only when math notation is essential.
+        - Keep each section useful for a student trying to understand the slide, not just OCR text.
 
         Use this exact structure:
         # {inferred slide title}
@@ -57,12 +80,12 @@ struct OpenRouterClient {
         Timestamp: \(AppFormatters.timestamp(slide.timestampSec))
         """
 
-        let markdown = try await sendVisionRequest(prompt: prompt, imageURLs: [slide.fileURL])
+        let response = try await sendVisionRequestWithFallback(prompt: prompt, imageURLs: [slide.fileURL])
         return SlideStudyNote(
             slideIndex: slide.index,
             timestampSec: slide.timestampSec,
-            markdown: markdown,
-            modelID: modelID,
+            markdown: response.content,
+            modelID: response.modelID,
             generatedAt: Date()
         )
     }
@@ -75,7 +98,9 @@ struct OpenRouterClient {
     ) async throws -> String {
         var prompt = """
         You are a Korean study assistant for lecture slides.
-        Answer clearly in Korean. Use Markdown. Be concrete and refer to slide numbers when possible.
+        Answer clearly in Korean. Use Notion-import-safe Markdown. Be concrete and refer to slide numbers when possible.
+        Use only #, ##, ### headings, "- " bullets, numbered lists, simple tables, fenced code blocks, blockquotes, and inline code.
+        Avoid HTML, footnotes, internal anchor links, Mermaid, and complex tables.
 
         Lecture title: \(job.title)
         User question: \(question)
@@ -106,10 +131,30 @@ struct OpenRouterClient {
             }
         }
 
-        return try await sendVisionRequest(prompt: prompt, imageURLs: imageURLs)
+        return try await sendVisionRequestWithFallback(prompt: prompt, imageURLs: imageURLs).content
     }
 
-    private func sendVisionRequest(prompt: String, imageURLs: [URL]) async throws -> String {
+    private func sendVisionRequestWithFallback(prompt: String, imageURLs: [URL]) async throws -> (content: String, modelID: String) {
+        var lastError: Error?
+
+        for modelID in modelIDs {
+            do {
+                let content = try await sendVisionRequest(prompt: prompt, imageURLs: imageURLs, modelID: modelID)
+                return (content, modelID)
+            } catch let openRouterError as OpenRouterError {
+                if case .invalidImageData = openRouterError {
+                    throw openRouterError
+                }
+                lastError = openRouterError
+            } catch {
+                lastError = error
+            }
+        }
+
+        throw lastError ?? OpenRouterError.emptyResponse
+    }
+
+    private func sendVisionRequest(prompt: String, imageURLs: [URL], modelID: String) async throws -> String {
         var request = URLRequest(url: URL(string: "https://openrouter.ai/api/v1/chat/completions")!)
         request.httpMethod = "POST"
         request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")

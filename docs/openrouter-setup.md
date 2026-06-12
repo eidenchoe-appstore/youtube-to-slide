@@ -23,7 +23,7 @@ Keep the key private. Do not paste it into GitHub issues, screenshots, shared no
 1. Open **YouTube to Slide**.
 2. Add and process a video or YouTube URL.
 3. Open the right inspector.
-4. Find **AI Study Notes**.
+4. Open the **API Settings** tab.
 5. Paste your OpenRouter API key into **OpenRouter API key**.
 6. Click **Save Key**.
 
@@ -31,11 +31,14 @@ The app stores the key in macOS Keychain. It does not write the key to the proje
 
 ## 3. Choose a Model
 
-The default model is:
+The default model order is:
 
 ```text
-nvidia/nemotron-nano-12b-v2-vl:free
+First model: nvidia/nemotron-nano-12b-v2-vl:free
+Second model: google/gemma-4-31b-it:free
 ```
+
+Select both **First model** and **Second model** in the **API Settings** tab. If the first model is rate-limited or temporarily unavailable, the app retries the same request with the second model. If both selectors use the same model, duplicate fallback is skipped.
 
 Available model choices:
 
@@ -45,13 +48,15 @@ Available model choices:
 | `google/gemma-4-31b-it:free` | Stronger broad image understanding, multilingual explanations, and long-context synthesis |
 | `nvidia/llama-nemotron-rerank-vl-1b-v2:free` | Lightweight option when speed matters more than depth |
 
-Free models can have provider-side rate limits or temporary availability issues. If a request fails, try again later or choose another model.
+Free models can have provider-side rate limits or temporary availability issues. Configure a fallback model so the app can recover from many temporary model failures without manual retry.
 
 ## 4. Generate Study Notes
 
 1. Select a processed job.
 2. Select a slide in **PNG Slides**.
 3. Click **Study Selected** for one slide, **Study All Slides** for manual full-deck note generation, or **Note to Notion Page** for the complete full-deck Notion export workflow.
+
+For token efficiency, **Study All Slides** and **Note to Notion Page** reuse notes that already exist and only send slides whose notes are still missing. Whole-deck chat uses generated notes as the primary context when they are available.
 
 The VLM is prompted to infer a slide title and create a study-note structure:
 
@@ -82,25 +87,31 @@ The app creates:
 
 ```text
 LectureTitle.notion-page.zip
-  LectureTitle.html
+  LectureTitle.md
   assets/
     slide_000001_3s.png
     slide_000002_37s.png
 ```
 
-The HTML uses a Notion-like heading hierarchy:
+The Markdown uses a Notion-safe heading hierarchy:
 
-```text
-Lecture title
-  Slide title inferred by the VLM
-    핵심 요약
-    슬라이드 내용 해설
-    이미지/텍스트에서 읽힌 주요 정보
-    공부할 때 주의할 점
-    복습 질문
+```markdown
+# Lecture title
+
+## Slide 1: Slide title inferred by the VLM
+
+![Slide 1](assets/slide_000001_3s.png)
+
+### 핵심 요약
+- Main points
+
+### 슬라이드 내용 해설
+- Student-friendly explanation
 ```
 
-Import the ZIP into Notion so the HTML and referenced images are handled together.
+Import the ZIP into Notion so the Markdown and referenced local slide images are handled together. The export intentionally avoids HTML tags, internal anchors, footnotes, Mermaid blocks, and complex tables because those are less reliable for Notion import.
+
+Reference: [Notion enhanced Markdown format](https://developers.notion.com/guides/data-apis/enhanced-markdown).
 
 ## Privacy Notes
 
