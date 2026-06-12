@@ -2,6 +2,7 @@ import SwiftUI
 
 struct SidebarView: View {
     @EnvironmentObject private var store: JobStore
+    private let demoURL = "https://www.youtube.com/watch?v=MxGW2WurKuM&list=PLRJhV4hUhIymmp5CCeIFPyxbknsdcXCc8&index=2"
 
     var body: some View {
         VStack(spacing: 0) {
@@ -18,6 +19,19 @@ struct SidebarView: View {
             Divider()
 
             VStack(alignment: .leading, spacing: 8) {
+                DropZoneView(compact: true)
+
+                Button {
+                    NotificationCenter.default.post(name: .loadDemoYouTubeURL, object: demoURL)
+                } label: {
+                    Label("Try demo video", systemImage: "play.rectangle")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+
+                Divider()
+                    .padding(.vertical, 2)
+
                 ToolStatusRow(name: "ffmpeg", available: store.toolStatus.hasFFmpeg, path: store.toolStatus.ffmpegPath)
                 if !store.toolStatus.hasFFmpeg {
                     Button {

@@ -14,8 +14,7 @@ struct MainWorkspaceView: View {
             if let job = store.selectedJob {
                 DetailView(job: job)
             } else {
-                DropZoneView()
-                    .padding(28)
+                EmptyWorkspaceView()
             }
         }
         .background(.background)
@@ -26,8 +25,6 @@ private struct InputHeaderView: View {
     @EnvironmentObject private var store: JobStore
     @Binding var youtubeURL: String
     @State private var previewState: PreviewLoadState = .idle
-
-    private let demoURL = "https://www.youtube.com/watch?v=MxGW2WurKuM&list=PLRJhV4hUhIymmp5CCeIFPyxbknsdcXCc8&index=2"
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -47,13 +44,6 @@ private struct InputHeaderView: View {
             YouTubePreviewCard(state: previewState)
 
             HStack {
-                Button {
-                    youtubeURL = demoURL
-                } label: {
-                    Label("Try demo video", systemImage: "play.rectangle")
-                }
-                .buttonStyle(.link)
-
                 Spacer()
 
                 if store.isProcessing {
@@ -76,11 +66,15 @@ private struct InputHeaderView: View {
                 .tint(.blue)
                 .disabled(store.isProcessing || store.jobs.isEmpty)
             }
-
-            DropZoneView(compact: true)
         }
         .task(id: youtubeURL) {
             await loadPreview(for: youtubeURL)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .loadDemoYouTubeURL)) { notification in
+            guard let demoURL = notification.object as? String else {
+                return
+            }
+            youtubeURL = demoURL
         }
     }
 
@@ -117,6 +111,26 @@ private struct InputHeaderView: View {
         } catch {
             previewState = .failed(error.localizedDescription)
         }
+    }
+}
+
+private struct EmptyWorkspaceView: View {
+    var body: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "rectangle.stack.badge.plus")
+                .font(.system(size: 42, weight: .regular))
+                .foregroundStyle(.secondary)
+
+            Text("Add a lecture to begin")
+                .font(.title3.weight(.semibold))
+
+            Text("Drop a video in the left sidebar or paste a YouTube URL above.")
+                .font(.callout)
+                .foregroundStyle(.secondary)
+        }
+        .multilineTextAlignment(.center)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(28)
     }
 }
 

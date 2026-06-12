@@ -37,4 +37,5 @@ struct YouTubeToSlideApp: App {
 
 extension Notification.Name {
     static let openVideoPanel = Notification.Name("openVideoPanel")
+    static let loadDemoYouTubeURL = Notification.Name("loadDemoYouTubeURL")
 }
